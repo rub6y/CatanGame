@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CatanPro - User Connection</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>CatanPro</h1>
+        
+        <div id="join-screen">
+            <input type="text" id="username" placeholder="Enter your name" />
+            <button id="join-btn">Join</button>
+        </div>
+
+        <div id="user-screen" class="hidden">
+            <h2>Connected Users</h2>
+            <ul id="user-list"></ul>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='js/client.js') }}"></script>
+</body>
+</html>
