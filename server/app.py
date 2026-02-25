@@ -52,6 +52,9 @@ def handle_join(data):
     if not name:
         return
 
+    if current_game is not None and current_game.game_state == "started":
+        role = "observer"
+
     users = load_users()
 
     existing_user = get_user_by_name(users, name)
@@ -85,6 +88,7 @@ def handle_start_game():
 
     users = load_users()
     players = [u.get('name') for u in users if u.get('role') == 'player']
+    observers = [u.get('name') for u in users if u.get('role') == 'observer']
 
     if len(players) < MIN_PLAYERS:
         emit('error', {'message': f'Need at least {MIN_PLAYERS} players to start'})
@@ -95,7 +99,30 @@ def handle_start_game():
 
     emit('game_started', {
         'players': current_game.players,
+        'observers': observers,
         'current_player': current_game.players[current_game.current_player_index]
+    }, broadcast=True)
+
+
+@socketio.on('next_turn')
+def handle_next_turn(data):
+    if current_game is None or current_game.game_state != "started":
+        return
+
+    current_player_name = current_game.players[current_game.current_player_index]
+    requester = data.get('name')
+
+    if requester != current_player_name:
+        emit('error', {'message': f'Only {current_player_name} can advance the turn'})
+        return
+
+    current_game.current_player_index = (current_game.current_player_index + 1) % len(current_game.players)
+    new_current_player = current_game.players[current_game.current_player_index]
+    print(f"Turn changed. Current player: {new_current_player}")
+
+    emit('turn_changed', {
+        'players': current_game.players,
+        'current_player': new_current_player
     }, broadcast=True)
 
 

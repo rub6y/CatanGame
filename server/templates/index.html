@@ -38,6 +38,27 @@
             </div>
             <button id="start-game-btn" class="hidden">Start Game</button>
         </div>
+
+        <div id="game-screen" class="hidden">
+            <div class="game-sidebar">
+                <div class="player-list">
+                    <h2>Players</h2>
+                    <ul id="game-players"></ul>
+                </div>
+                <div class="observer-list">
+                    <h2>Observers</h2>
+                    <ul id="game-observers"></ul>
+                </div>
+            </div>
+            <div class="game-main">
+                <div class="game-board">
+                    <p>Game Board Placeholder</p>
+                </div>
+                <div class="game-console" id="game-console">
+                    <button id="next-turn-btn">Next Turn</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>

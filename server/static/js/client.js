@@ -3,9 +3,11 @@ const socket = io();
 let currentUser = null;
 let currentRole = null;
 let gameStarted = false;
+let currentPlayer = null;
 
 const joinScreen = document.getElementById('join-screen');
 const userScreen = document.getElementById('user-screen');
+const gameScreen = document.getElementById('game-screen');
 const usernameInput = document.getElementById('username');
 const joinBtn = document.getElementById('join-btn');
 const playerList = document.getElementById('players');
@@ -14,6 +16,10 @@ const playerCount = document.getElementById('player-count');
 const rolePlayer = document.getElementById('role-player');
 const roleObserver = document.getElementById('role-observer');
 const startGameBtn = document.getElementById('start-game-btn');
+const gamePlayersList = document.getElementById('game-players');
+const gameObserversList = document.getElementById('game-observers');
+const gameConsole = document.getElementById('game-console');
+const nextTurnBtn = document.getElementById('next-turn-btn');
 
 function join() {
     const name = usernameInput.value.trim();
@@ -42,6 +48,10 @@ usernameInput.addEventListener('keypress', (e) => {
 
 startGameBtn.addEventListener('click', () => {
     socket.emit('start_game');
+});
+
+nextTurnBtn.addEventListener('click', () => {
+    socket.emit('next_turn', { name: currentUser });
 });
 
 function updateStartButton() {
@@ -76,6 +86,39 @@ function renderUserList(data) {
     });
 }
 
+function renderGameSidebar(data) {
+    gamePlayersList.innerHTML = '';
+    gameObserversList.innerHTML = '';
+
+    data.players.forEach(name => {
+        const li = document.createElement('li');
+        li.textContent = name;
+        if (name === currentPlayer) {
+            li.classList.add('current-turn');
+        }
+        gamePlayersList.appendChild(li);
+    });
+
+    data.observers.forEach(name => {
+        const li = document.createElement('li');
+        li.textContent = name;
+        gameObserversList.appendChild(li);
+    });
+}
+
+function updateConsoleVisibility() {
+    if (currentRole === 'observer') {
+        gameConsole.classList.add('hidden');
+    } else if (currentUser === currentPlayer) {
+        gameConsole.classList.remove('hidden');
+        nextTurnBtn.disabled = false;
+    } else {
+        gameConsole.classList.remove('hidden');
+        nextTurnBtn.disabled = true;
+        nextTurnBtn.textContent = `Waiting for ${currentPlayer}...`;
+    }
+}
+
 socket.on('user_list', (data) => {
     renderUserList(data);
     updateStartButton();
@@ -83,9 +126,20 @@ socket.on('user_list', (data) => {
 
 socket.on('game_started', (data) => {
     gameStarted = true;
-    startGameBtn.classList.add('hidden');
+    currentPlayer = data.current_player;
+    userScreen.classList.add('hidden');
+    gameScreen.classList.remove('hidden');
+    renderGameSidebar(data);
+    updateConsoleVisibility();
     console.log('Game started! Player order:', data.players);
     console.log('Current player:', data.current_player);
+});
+
+socket.on('turn_changed', (data) => {
+    currentPlayer = data.current_player;
+    renderGameSidebar({ players: data.players, observers: [] });
+    updateConsoleVisibility();
+    console.log('Turn changed. Current player:', data.current_player);
 });
 
 socket.on('error', (data) => {
