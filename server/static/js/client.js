@@ -133,6 +133,11 @@ socket.on('game_started', (data) => {
     gameScreen.classList.remove('hidden');
     renderGameSidebar(data);
     updateConsoleVisibility();
+    
+    if (data.board) {
+        window.BoardRenderer.render(data.board, 'board-canvas');
+    }
+    
     console.log('Game started! Player order:', data.players);
     console.log('Current player:', data.current_player);
 });
@@ -149,6 +154,11 @@ socket.on('game_state', (data) => {
     gameScreen.classList.remove('hidden');
     renderGameSidebar(data);
     updateConsoleVisibility();
+    
+    if (data.board) {
+        window.BoardRenderer.render(data.board, 'board-canvas');
+    }
+    
     console.log('Reconnected to game. Current player:', data.current_player);
 });
 

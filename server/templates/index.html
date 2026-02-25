@@ -51,8 +51,8 @@
                 </div>
             </div>
             <div class="game-main">
-                <div class="game-board">
-                    <p>Game Board Placeholder</p>
+                <div class="game-board" id="game-board">
+                    <canvas id="board-canvas"></canvas>
                 </div>
                 <div class="game-console" id="game-console">
                     <button id="next-turn-btn">Next Turn</button>
@@ -62,6 +62,7 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='js/board-renderer.js') }}"></script>
     <script src="{{ url_for('static', filename='js/client.js') }}"></script>
 </body>
 </html>

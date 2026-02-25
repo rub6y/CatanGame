@@ -84,7 +84,8 @@ def handle_join(data):
         emit('game_state', {
             'players': current_game.players,
             'observers': current_game.observers,
-            'current_player': current_game.players[current_game.current_player_index]
+            'current_player': current_game.players[current_game.current_player_index],
+            'board': current_game.get_board_data()
         })
 
 
@@ -115,7 +116,8 @@ def handle_start_game():
     emit('game_started', {
         'players': current_game.players,
         'observers': current_game.observers,
-        'current_player': current_game.players[current_game.current_player_index]
+        'current_player': current_game.players[current_game.current_player_index],
+        'board': current_game.get_board_data()
     }, broadcast=True)
 
 

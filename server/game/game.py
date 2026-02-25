@@ -400,6 +400,41 @@ class Game:
                     if connected_vertex_key != vertex_key and connected_vertex_key not in vertex_obj.neighbors["vertices"]:
                         vertex_obj.neighbors["vertices"].append(connected_vertex_key)
     
+    def get_board_data(self) -> dict:
+        """
+        Serialize board data for sending to client.
+        
+        Returns:
+            dict: Board data including hexes, vertices, and edges
+        """
+        hexes = {}
+        for key, hex_obj in self.hexes.items():
+            hexes[key] = {
+                'type': hex_obj.type,
+                'number': hex_obj.number,
+                'neighbors': hex_obj.neighbors
+            }
+        
+        vertices = {}
+        for key, vertex_obj in self.vertices.items():
+            vertices[key] = {
+                'building': vertex_obj.building,
+                'neighbors': vertex_obj.neighbors
+            }
+        
+        edges = {}
+        for key, edge_obj in self.edges.items():
+            edges[key] = {
+                'road': edge_obj.road,
+                'neighbors': edge_obj.neighbors
+            }
+        
+        return {
+            'hexes': hexes,
+            'vertices': vertices,
+            'edges': edges
+        }
+    
     def start(self):
         """Start the game and shuffle player order."""
         random.shuffle(self.players)
