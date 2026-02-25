@@ -166,6 +166,89 @@ def handle_set_color(data):
         }, broadcast=True)
 
 
+@socketio.on('place_settlement')
+def handle_place_settlement(data):
+    if current_game is None or current_game.game_state != "started":
+        return
+    
+    name = data.get('name', '')
+    vertex_key = data.get('vertex', '')
+    
+    if not name or not vertex_key:
+        return
+    
+    # Check if it's this player's turn
+    current_player = current_game.players[current_game.current_player_index]
+    if current_player.name != name:
+        emit('error', {'message': f'Only {current_player.name} can place buildings'})
+        return
+    
+    # Check if vertex exists
+    if vertex_key not in current_game.vertices:
+        emit('error', {'message': 'Invalid vertex'})
+        return
+    
+    vertex = current_game.vertices[vertex_key]
+    
+    # Check if vertex already has a building
+    if vertex.building is not None:
+        emit('error', {'message': 'This location already has a building'})
+        return
+    
+    # Place settlement (store as settlement type with player name)
+    vertex.building = {
+        'type': 'settlement',
+        'player': name
+    }
+    
+    print(f"Player {name} placed settlement at {vertex_key}")
+    
+    # Broadcast updated board
+    emit('board_updated', {
+        'board': current_game.get_board_data()
+    }, broadcast=True)
+
+
+@socketio.on('place_road')
+def handle_place_road(data):
+    if current_game is None or current_game.game_state != "started":
+        return
+    
+    name = data.get('name', '')
+    edge_key = data.get('edge', '')
+    
+    if not name or not edge_key:
+        return
+    
+    # Check if it's this player's turn
+    current_player = current_game.players[current_game.current_player_index]
+    if current_player.name != name:
+        emit('error', {'message': f'Only {current_player.name} can place buildings'})
+        return
+    
+    # Check if edge exists
+    if edge_key not in current_game.edges:
+        emit('error', {'message': 'Invalid edge'})
+        return
+    
+    edge = current_game.edges[edge_key]
+    
+    # Check if edge already has a road
+    if edge.road is not None:
+        emit('error', {'message': 'This location already has a road'})
+        return
+    
+    # Place road (store with player name)
+    edge.road = {'player': name}
+    
+    print(f"Player {name} placed road at {edge_key}")
+    
+    # Broadcast updated board
+    emit('board_updated', {
+        'board': current_game.get_board_data()
+    }, broadcast=True)
+
+
 def emit_user_list():
     users = load_users()
     players = [u for u in users if u.get('role') == 'player']

@@ -1,10 +1,13 @@
 const socket = io();
 
+// Game state variables
 let currentUser = null;
 let currentRole = null;
 let gameStarted = false;
 let currentPlayer = null;
+let selectedBuilding = null;  // 'settlement', 'road', or null
 
+// DOM elements
 const joinScreen = document.getElementById('join-screen');
 const userScreen = document.getElementById('user-screen');
 const gameScreen = document.getElementById('game-screen');
@@ -19,9 +22,18 @@ const startGameBtn = document.getElementById('start-game-btn');
 const gamePlayersList = document.getElementById('game-players');
 const gameObserversList = document.getElementById('game-observers');
 const gameConsole = document.getElementById('game-console');
+const gameBoard = document.getElementById('game-board');
 const nextTurnBtn = document.getElementById('next-turn-btn');
 const colorPicker = document.getElementById('color-picker');
+const placeSettlementBtn = document.getElementById('place-settlement-btn');
+const placeRoadBtn = document.getElementById('place-road-btn');
 
+// Store current board data for click handling
+let currentBoardData = null;
+
+/**
+ * Handle join button click - connect to game
+ */
 function join() {
     const name = usernameInput.value.trim();
     if (!name) {
@@ -47,18 +59,102 @@ usernameInput.addEventListener('keypress', (e) => {
     }
 });
 
+/**
+ * Handle Start Game button click
+ */
 startGameBtn.addEventListener('click', () => {
     socket.emit('start_game');
 });
 
+/**
+ * Handle Next Turn button click
+ */
 nextTurnBtn.addEventListener('click', () => {
     socket.emit('next_turn', { name: currentUser });
 });
 
+/**
+ * Handle color picker change - emit set_color event
+ */
 colorPicker.addEventListener('change', () => {
     socket.emit('set_color', { name: currentUser, color: colorPicker.value });
 });
 
+/**
+ * Handle Place Settlement button click - toggle settlement placement mode
+ */
+placeSettlementBtn.addEventListener('click', () => {
+    if (selectedBuilding === 'settlement') {
+        // Deselect
+        selectedBuilding = null;
+        placeSettlementBtn.classList.remove('active');
+        gameBoard.classList.remove('placement-mode');
+    } else {
+        // Select settlement
+        selectedBuilding = 'settlement';
+        placeSettlementBtn.classList.add('active');
+        placeRoadBtn.classList.remove('active');
+        gameBoard.classList.add('placement-mode');
+    }
+});
+
+/**
+ * Handle Place Road button click - toggle road placement mode
+ */
+placeRoadBtn.addEventListener('click', () => {
+    if (selectedBuilding === 'road') {
+        // Deselect
+        selectedBuilding = null;
+        placeRoadBtn.classList.remove('active');
+        gameBoard.classList.remove('placement-mode');
+    } else {
+        // Select road
+        selectedBuilding = 'road';
+        placeRoadBtn.classList.add('active');
+        placeSettlementBtn.classList.remove('active');
+        gameBoard.classList.add('placement-mode');
+    }
+});
+
+/**
+ * Handle canvas click - place building at clicked position
+ */
+document.getElementById('board-canvas').addEventListener('click', (event) => {
+    if (!selectedBuilding || currentUser !== currentPlayer) {
+        return;
+    }
+
+    const canvas = event.target;
+    const rect = canvas.getBoundingClientRect();
+    const clickX = event.clientX - rect.left;
+    const clickY = event.clientY - rect.top;
+
+    if (selectedBuilding === 'settlement') {
+        // Find nearest vertex
+        const vertexKey = window.BoardRenderer.findNearestVertex(clickX, clickY);
+        if (vertexKey) {
+            console.log('Placing settlement at:', vertexKey);
+            socket.emit('place_settlement', { 
+                name: currentUser, 
+                vertex: vertexKey 
+            });
+        }
+    } else if (selectedBuilding === 'road') {
+        // Find nearest edge
+        const edgeKey = window.BoardRenderer.findNearestEdge(clickX, clickY);
+        if (edgeKey) {
+            console.log('Placing road at:', edgeKey);
+            socket.emit('place_road', { 
+                name: currentUser, 
+                edge: edgeKey 
+            });
+        }
+    }
+});
+
+/**
+ * Update Start Game button visibility based on game state
+ */
 function updateStartButton() {
     if (currentRole === 'player' && !gameStarted) {
         startGameBtn.classList.remove('hidden');
@@ -67,6 +163,9 @@ function updateStartButton() {
     }
 }
 
+/**
+ * Render user list in lobby
+ */
 function renderUserList(data) {
     playerList.innerHTML = '';
     observerList.innerHTML = '';
@@ -91,6 +190,9 @@ function renderUserList(data) {
     });
 }
 
+/**
+ * Render game sidebar (players and observers)
+ */
 function renderGameSidebar(data) {
     gamePlayersList.innerHTML = '';
     gameObserversList.innerHTML = '';
@@ -111,6 +213,9 @@ function renderGameSidebar(data) {
     });
 }
 
+/**
+ * Update console visibility and button states based on current turn
+ */
 function updateConsoleVisibility() {
     if (currentRole === 'observer') {
         gameConsole.classList.add('hidden');
@@ -119,13 +224,25 @@ function updateConsoleVisibility() {
         nextTurnBtn.disabled = false;
         nextTurnBtn.textContent = `Next Turn`;
         colorPicker.style.display = 'inline-block';
+        placeSettlementBtn.style.display = 'inline-block';
+        placeRoadBtn.style.display = 'inline-block';
     } else {
         gameConsole.classList.remove('hidden');
         nextTurnBtn.disabled = true;
         nextTurnBtn.textContent = `Waiting for ${currentPlayer}...`;
         colorPicker.style.display = 'inline-block';
+        placeSettlementBtn.style.display = 'inline-block';
+        placeRoadBtn.style.display = 'inline-block';
     }
+    
+    // Reset building selection when turn changes
+    selectedBuilding = null;
+    placeSettlementBtn.classList.remove('active');
+    placeRoadBtn.classList.remove('active');
+    gameBoard.classList.remove('placement-mode');
 }
+
+// Socket event handlers
 
 socket.on('user_list', (data) => {
     renderUserList(data);
@@ -141,6 +258,8 @@ socket.on('game_started', (data) => {
     renderGameSidebar(data);
     updateConsoleVisibility();
     
+    // Store board data and render
+    currentBoardData = data.board;
     if (data.board) {
         window.BoardRenderer.render(data.board, 'board-canvas');
     }
@@ -162,6 +281,8 @@ socket.on('game_state', (data) => {
     renderGameSidebar(data);
     updateConsoleVisibility();
     
+    // Store board data and render
+    currentBoardData = data.board;
     if (data.board) {
         window.BoardRenderer.render(data.board, 'board-canvas');
     }
@@ -180,6 +301,18 @@ socket.on('player_color_changed', (data) => {
     console.log(`Player ${data.name} changed color to ${data.color}`);
     if (data.name === currentUser) {
         colorPicker.value = data.color;
+    }
+    // Re-render board with updated player colors
+    if (currentBoardData) {
+        window.BoardRenderer.render(currentBoardData, 'board-canvas');
+    }
+});
+
+socket.on('board_updated', (data) => {
+    console.log('Board updated');
+    currentBoardData = data.board;
+    if (data.board) {
+        window.BoardRenderer.render(data.board, 'board-canvas');
     }
 });
 

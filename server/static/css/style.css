@@ -190,8 +190,24 @@ button:hover {
     cursor: pointer;
 }
 
+#place-settlement-btn,
+#place-road-btn {
+    padding: 0.6rem 1rem;
+}
+
+#place-settlement-btn.active,
+#place-road-btn.active {
+    background-color: #27ae60;
+    border: 2px solid #2ecc71;
+}
+
 #next-turn-btn {
     padding: 0.8rem 2rem;
+}
+
+/* Cursor when in placement mode */
+.game-board.placement-mode {
+    cursor: crosshair;
 }
 
 .hidden {
