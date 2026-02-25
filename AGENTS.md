@@ -2,8 +2,8 @@
 
 ## Project Overview
 This is a Catan board game web application using:
-- **Backend**: Python with Flask and sockets for server/game logic
-- **Frontend**: JavaScript and HTML
+- **Backend**: Python with Flask and Flask-SocketIO for server/game logic
+- **Frontend**: Vanilla JavaScript and HTML (no React/framework)
 - **Architecture**: Modular component-based design
 
 ---
@@ -14,52 +14,35 @@ This is a Catan board game web application using:
 
 ```bash
 # Install dependencies
-pip install -r requirements.txt
+pip install -r server/requirements.txt
 
 # Run the Flask server
-python app.py
+python server/app.py
 
 # Run with Flask debug mode
-FLASK_DEBUG=1 python app.py
+FLASK_DEBUG=1 python server/app.py
 
 # Run a single test
-pytest tests/test_file.py::test_function_name -v
-pytest tests/test_file.py -k "test_name_pattern" -v
+pytest server/tests/test_file.py::test_function_name -v
+pytest server/tests/ -k "test_name_pattern" -v
 
 # Run all tests
-pytest
+pytest server/tests/
 
 # Lint Python code
-flake8 .
-pylint src/
+flake8 server/
+pylint server/
 
 # Type checking (if using mypy)
-mypy src/
+mypy server/
 ```
 
 ### JavaScript (Frontend)
-
+No build system - vanilla JS served directly. For linting:
 ```bash
-# Install dependencies
-npm install
-
-# Run development server
-npm run dev
-
-# Build for production
-npm run build
-
-# Run tests
-npm test
-npm test -- --testPathPattern="test_name"
-npm test -- --testNamePattern="test_name"
-
-# Lint
-npm run lint
-npm run lint -- --fix
-
-# Format code
-npm run format
+# Install ESLint (if configured)
+npm install eslint --save-dev
+npx eslint server/static/js/
 ```
 
 ---
@@ -78,7 +61,7 @@ npm run format
 **Imports**
 - Standard library first, then third-party, then local
 - Group by: stdlib → external → project
-- Use absolute imports: `from app.models import User`
+- Use absolute imports: `from server.game.models import Player`
 - Avoid `from module import *`
 
 **Naming Conventions**
@@ -117,38 +100,38 @@ def create_app(config: dict) -> Flask:
 
 ### JavaScript Style
 
-**Imports**
-- Use ES6 modules: `import { x } from './module'`
-- Prefer default exports for single exports
-- Group: React → external → local
+**General**
+- Use ES6+ syntax
+- Keep scripts modular in separate files
+- Avoid global variables - use modules with explicit exports
 
 **Naming Conventions**
 - Variables/functions: `camelCase`
-- Components/Classes: `PascalCase`
+- Classes/Constructors: `PascalCase`
 - Constants: `UPPER_SNAKE_CASE` or `camelCase` for config objects
-
-**Types**
-- Use TypeScript when possible
-- Define interfaces for data structures
-- Avoid `any` type
 
 **Error Handling**
 - Always handle async errors with try/catch
-- Use error boundaries in React
-- Display user-friendly error messages
+- Display user-friendly error messages in UI
 - Log detailed errors server-side
 
 **Example**:
-```typescript
-interface Player {
-  id: string;
-  name: string;
-  points: number;
-}
-
+```javascript
 const PLAYER_MAX_POINTS = 10;
 
-function calculateScore(player: Player): number {
+class Player {
+  constructor(id, name) {
+    this.id = id;
+    this.name = name;
+    this.points = 0;
+  }
+
+  addPoints(points) {
+    this.points += points;
+  }
+}
+
+function calculateScore(player) {
   return player.points;
 }
 ```
@@ -160,23 +143,19 @@ function calculateScore(player: Player): number {
 ```
 CatanPro/
 ├── server/                 # Python backend
-│   ├── app.py             # Flask entry point
-│   ├── game/              # Game logic modules
-│   │   ├── __init__.py
-│   │   ├── board.py
-│   │   ├── player.py
-│   │   └── ...
-│   ├── sockets/           # Socket handlers
-│   └── tests/             # Python tests
-├── client/                # Frontend
-│   ├── src/
-│   │   ├── components/   # React components
-│   │   ├── hooks/        # Custom hooks
-│   │   ├── services/    # API clients
-│   │   └── ...
-│   ├── public/
-│   └── tests/            # JS tests
-└── requirements.txt       # Python dependencies
+│   ├── app.py            # Flask + SocketIO entry point
+│   ├── requirements.txt  # Python dependencies
+│   ├── static/           # Static assets
+│   │   ├── css/         # Stylesheets
+│   │   └── js/          # JavaScript files
+│   ├── templates/       # HTML templates
+│   ├── data/            # Game data
+│   ├── game/            # Game logic modules (create as needed)
+│   ├── sockets/         # Socket handlers (create as needed)
+│   └── tests/           # Python tests
+├── build.md             # Original project specification
+├── shell.nix            # Nix environment (optional)
+└── AGENTS.md            # This file
 ```
 
 ---
@@ -194,21 +173,30 @@ CatanPro/
 
 ### Python
 - Use `pytest` as test framework
-- Place tests in `tests/` directory
+- Place tests in `server/tests/` directory
 - Follow naming: `test_<module>_<function>.py`
 - Use fixtures for common test setup
 - Mock external dependencies
 
 ### JavaScript
-- Use Jest or Vitest
-- Place tests alongside source files (`Component.test.tsx`) or in `__tests__/`
-- Use `@testing-library/react` for component tests
-- Write integration tests for API calls
+- Manual testing in browser (no test framework currently)
+- Add tests if Jest/Vitest is later configured
+
+---
+
+## Socket Events
+
+When modifying socket handlers, document event names:
+- `connect` - Client connects
+- `disconnect` - Client disconnects
+- Custom events for game actions (document as implemented)
 
 ---
 
 ## Additional Notes
 
-- Check `Documents/chatProject` for Python project structure reference (as mentioned in build.md)
+- This is a Flask + SocketIO project (not React)
+- Frontend uses vanilla JavaScript in `server/static/js/`
+- HTML templates in `server/templates/`
 - Run linting before committing
 - Ensure all tests pass before submitting PRs
