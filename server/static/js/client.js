@@ -112,6 +112,7 @@ function updateConsoleVisibility() {
     } else if (currentUser === currentPlayer) {
         gameConsole.classList.remove('hidden');
         nextTurnBtn.disabled = false;
+        nextTurnBtn.textContent = `Next Turn`;
     } else {
         gameConsole.classList.remove('hidden');
         nextTurnBtn.disabled = true;
