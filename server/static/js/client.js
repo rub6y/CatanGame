@@ -1,12 +1,17 @@
 const socket = io();
 
 let currentUser = null;
+let currentRole = null;
 
 const joinScreen = document.getElementById('join-screen');
 const userScreen = document.getElementById('user-screen');
 const usernameInput = document.getElementById('username');
 const joinBtn = document.getElementById('join-btn');
-const userList = document.getElementById('user-list');
+const playerList = document.getElementById('players');
+const observerList = document.getElementById('observers');
+const playerCount = document.getElementById('player-count');
+const rolePlayer = document.getElementById('role-player');
+const roleObserver = document.getElementById('role-observer');
 
 function join() {
     const name = usernameInput.value.trim();
@@ -15,8 +20,11 @@ function join() {
         return;
     }
 
+    const role = document.querySelector('input[name="role"]:checked').value;
+
     currentUser = name;
-    socket.emit('join', { name: name });
+    currentRole = role;
+    socket.emit('join', { name: name, role: role });
     joinScreen.classList.add('hidden');
     userScreen.classList.remove('hidden');
 }
@@ -29,20 +37,44 @@ usernameInput.addEventListener('keypress', (e) => {
     }
 });
 
-socket.on('user_list', (data) => {
-    userList.innerHTML = '';
-    data.users.forEach(user => {
+function renderUserList(data) {
+    playerList.innerHTML = '';
+    observerList.innerHTML = '';
+    playerCount.textContent = data.players.length;
+
+    data.players.forEach(user => {
         const li = document.createElement('li');
-        li.textContent = user;
-        if (user === currentUser) {
+        li.textContent = user.name;
+        if (user.name === currentUser) {
             li.classList.add('current-user');
         }
-        userList.appendChild(li);
+        playerList.appendChild(li);
     });
+
+    data.observers.forEach(user => {
+        const li = document.createElement('li');
+        li.textContent = user.name;
+        if (user.name === currentUser) {
+            li.classList.add('current-user');
+        }
+        observerList.appendChild(li);
+    });
+}
+
+socket.on('user_list', (data) => {
+    renderUserList(data);
+});
+
+socket.on('error', (data) => {
+    alert(data.message);
+    joinScreen.classList.remove('hidden');
+    userScreen.classList.add('hidden');
+    currentUser = null;
+    currentRole = null;
 });
 
 socket.on('connect', () => {
     if (currentUser) {
-        socket.emit('join', { name: currentUser });
+        socket.emit('join', { name: currentUser, role: currentRole });
     }
 });

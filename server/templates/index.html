@@ -11,13 +11,31 @@
         <h1>CatanPro</h1>
         
         <div id="join-screen">
+            <div class="role-selection">
+                <label>
+                    <input type="radio" name="role" value="player" id="role-player">
+                    Player
+                </label>
+                <label>
+                    <input type="radio" name="role" value="observer" id="role-observer" checked>
+                    Observer
+                </label>
+            </div>
             <input type="text" id="username" placeholder="Enter your name" />
             <button id="join-btn">Join</button>
         </div>
 
         <div id="user-screen" class="hidden">
-            <h2>Connected Users</h2>
-            <ul id="user-list"></ul>
+            <div class="user-lists">
+                <div class="player-list">
+                    <h2>Players (<span id="player-count">0</span>/4)</h2>
+                    <ul id="players"></ul>
+                </div>
+                <div class="observer-list">
+                    <h2>Observers</h2>
+                    <ul id="observers"></ul>
+                </div>
+            </div>
         </div>
     </div>
 
