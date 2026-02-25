@@ -309,10 +309,8 @@ function renderBoard(boardData, canvasId) {
             } else if (vertex.building.type === 'city') {
                 drawCity(ctx, pos.x, pos.y, playerColor);
             }
-        } else {
-            // Draw test vertex dot
-            drawVertex(ctx, pos.x, pos.y);
         }
+        // Note: Empty vertices are not drawn (only clickable)
     }
     
     // Calculate and store edge positions
@@ -338,10 +336,8 @@ function renderBoard(boardData, canvasId) {
                 if (edge.road) {
                     const playerColor = playerColors[edge.road.player] || null;
                     drawRoad(ctx, pos1.x, pos1.y, pos2.x, pos2.y, playerColor);
-                } else {
-                    // Draw test edge line
-                    drawEdge(ctx, pos1.x, pos1.y, pos2.x, pos2.y);
                 }
+                // Note: Empty edges are not drawn (only clickable)
             }
         }
     }
