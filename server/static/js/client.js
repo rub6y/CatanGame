@@ -128,12 +128,28 @@ socket.on('user_list', (data) => {
 socket.on('game_started', (data) => {
     gameStarted = true;
     currentPlayer = data.current_player;
+    currentRole = 'player';
     userScreen.classList.add('hidden');
     gameScreen.classList.remove('hidden');
     renderGameSidebar(data);
     updateConsoleVisibility();
     console.log('Game started! Player order:', data.players);
     console.log('Current player:', data.current_player);
+});
+
+socket.on('game_state', (data) => {
+    gameStarted = true;
+    currentPlayer = data.current_player;
+    if (data.players.includes(currentUser)) {
+        currentRole = 'player';
+    } else {
+        currentRole = 'observer';
+    }
+    userScreen.classList.add('hidden');
+    gameScreen.classList.remove('hidden');
+    renderGameSidebar(data);
+    updateConsoleVisibility();
+    console.log('Reconnected to game. Current player:', data.current_player);
 });
 
 socket.on('turn_changed', (data) => {

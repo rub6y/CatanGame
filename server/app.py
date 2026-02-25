@@ -52,12 +52,16 @@ def handle_join(data):
     if not name:
         return
 
+    reconnecting_to_game = False
+
     if current_game is not None and current_game.game_state == "started":
         if current_game.is_player(name):
             role = "player"
+            reconnecting_to_game = True
         else:
             role = "observer"
             current_game.add_observer(name)
+            reconnecting_to_game = True
 
     users = load_users()
 
@@ -75,6 +79,13 @@ def handle_join(data):
     save_users(users)
 
     emit_user_list()
+
+    if reconnecting_to_game:
+        emit('game_state', {
+            'players': current_game.players,
+            'observers': current_game.observers,
+            'current_player': current_game.players[current_game.current_player_index]
+        })
 
 
 @socketio.on('request_users')
