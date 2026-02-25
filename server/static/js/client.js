@@ -138,7 +138,7 @@ socket.on('game_started', (data) => {
 
 socket.on('turn_changed', (data) => {
     currentPlayer = data.current_player;
-    renderGameSidebar({ players: data.players, observers: [] });
+    renderGameSidebar({ players: data.players, observers: data.observers });
     updateConsoleVisibility();
     console.log('Turn changed. Current player:', data.current_player);
 });

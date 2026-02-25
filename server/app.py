@@ -53,7 +53,11 @@ def handle_join(data):
         return
 
     if current_game is not None and current_game.game_state == "started":
-        role = "observer"
+        if current_game.is_player(name):
+            role = "player"
+        else:
+            role = "observer"
+            current_game.add_observer(name)
 
     users = load_users()
 
@@ -94,12 +98,12 @@ def handle_start_game():
         emit('error', {'message': f'Need at least {MIN_PLAYERS} players to start'})
         return
 
-    current_game = Game(players)
+    current_game = Game(players, observers)
     current_game.start()
 
     emit('game_started', {
         'players': current_game.players,
-        'observers': observers,
+        'observers': current_game.observers,
         'current_player': current_game.players[current_game.current_player_index]
     }, broadcast=True)
 
@@ -122,6 +126,7 @@ def handle_next_turn(data):
 
     emit('turn_changed', {
         'players': current_game.players,
+        'observers': current_game.observers,
         'current_player': new_current_player
     }, broadcast=True)
 
