@@ -20,6 +20,7 @@ const gamePlayersList = document.getElementById('game-players');
 const gameObserversList = document.getElementById('game-observers');
 const gameConsole = document.getElementById('game-console');
 const nextTurnBtn = document.getElementById('next-turn-btn');
+const colorPicker = document.getElementById('color-picker');
 
 function join() {
     const name = usernameInput.value.trim();
@@ -52,6 +53,10 @@ startGameBtn.addEventListener('click', () => {
 
 nextTurnBtn.addEventListener('click', () => {
     socket.emit('next_turn', { name: currentUser });
+});
+
+colorPicker.addEventListener('change', () => {
+    socket.emit('set_color', { name: currentUser, color: colorPicker.value });
 });
 
 function updateStartButton() {
@@ -113,10 +118,12 @@ function updateConsoleVisibility() {
         gameConsole.classList.remove('hidden');
         nextTurnBtn.disabled = false;
         nextTurnBtn.textContent = `Next Turn`;
+        colorPicker.style.display = 'inline-block';
     } else {
         gameConsole.classList.remove('hidden');
         nextTurnBtn.disabled = true;
         nextTurnBtn.textContent = `Waiting for ${currentPlayer}...`;
+        colorPicker.style.display = 'inline-block';
     }
 }
 
@@ -167,6 +174,13 @@ socket.on('turn_changed', (data) => {
     renderGameSidebar({ players: data.players, observers: data.observers });
     updateConsoleVisibility();
     console.log('Turn changed. Current player:', data.current_player);
+});
+
+socket.on('player_color_changed', (data) => {
+    console.log(`Player ${data.name} changed color to ${data.color}`);
+    if (data.name === currentUser) {
+        colorPicker.value = data.color;
+    }
 });
 
 socket.on('error', (data) => {

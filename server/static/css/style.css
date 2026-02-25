@@ -178,6 +178,16 @@ button:hover {
     border-radius: 5px;
     display: flex;
     justify-content: center;
+    align-items: center;
+    gap: 1rem;
+}
+
+#color-picker {
+    width: 50px;
+    height: 40px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
 }
 
 #next-turn-btn {
