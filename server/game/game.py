@@ -1,6 +1,7 @@
 import random
 
 from game.hex_models import Hex, Vertex, Edge
+from game.player import Player
 
 
 class Game:
@@ -11,7 +12,7 @@ class Game:
     The board is generated using a cube coordinate system (see hex.md).
     
     Attributes:
-        players (list): List of player names in turn order.
+        players (list): List of Player objects in turn order.
         observers (list): List of observer names.
         current_player_index (int): Index of current player in players list.
         game_state (str): "waiting" or "started".
@@ -21,6 +22,9 @@ class Game:
         vertices (dict): Map of vertex key -> Vertex object.
         edges (dict): Map of edge key -> Edge object.
     """
+    
+    # Predefined colors for up to 4 players
+    PLAYER_COLORS = ['#e74c3c', '#3498db', '#f39c12', '#9b59b6']
     
     # Direction vectors for generating neighbors (from hex.md)
     # Used to find adjacent hexes from any given hex
@@ -55,8 +59,13 @@ class Game:
         (0, -1, 1),   # Lower right
     ]
     
-    def __init__(self, players: list, observers: list):
-        self.players = players
+    def __init__(self, player_names: list, observers: list):
+        # Create Player objects with colors
+        self.players = []
+        for i, name in enumerate(player_names):
+            color = self.PLAYER_COLORS[i] if i < len(self.PLAYER_COLORS) else '#ffffff'
+            self.players.append(Player(name, color))
+        
         self.observers = observers
         self.current_player_index = 0
         self.game_state = "waiting"
@@ -87,7 +96,26 @@ class Game:
     
     def is_player(self, name: str) -> bool:
         """Check if a name is a player in this game."""
-        return name in self.players
+        return any(p.name == name for p in self.players)
+    
+    def get_player(self, name: str) -> Player | None:
+        """Get Player object by name."""
+        for p in self.players:
+            if p.name == name:
+                return p
+        return None
+    
+    def set_player_color(self, name: str, color: str) -> bool:
+        """Set or update a player's color. Returns True if successful."""
+        player = self.get_player(name)
+        if player:
+            player.set_color(color)
+            return True
+        return False
+    
+    def get_player_names(self) -> list:
+        """Get list of player names (for compatibility)."""
+        return [p.name for p in self.players]
     
     def _hex_key(self, x: int, y: int, z: int) -> str:
         """
@@ -432,7 +460,8 @@ class Game:
         return {
             'hexes': hexes,
             'vertices': vertices,
-            'edges': edges
+            'edges': edges,
+            'players': [p.to_dict() for p in self.players]
         }
     
     def start(self):

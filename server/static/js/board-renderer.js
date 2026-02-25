@@ -80,6 +80,22 @@ function getHexColor(hexType) {
     return BOARD_CONFIG.colors[hexType] || BOARD_CONFIG.colors.ocean;
 }
 
+function drawVertex(ctx, x, y) {
+    ctx.beginPath();
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fillStyle = 'red';
+    ctx.fill();
+}
+
+function drawEdge(ctx, x1, y1, x2, y2) {
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.strokeStyle = 'red';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+}
+
 function renderBoard(boardData, canvasId) {
     const canvas = document.getElementById(canvasId);
     if (!canvas) {
@@ -126,6 +142,31 @@ function renderBoard(boardData, canvasId) {
         drawHex(ctx, pos.x, pos.y, hexRadius - 2, getHexColor(hex.type), hex.number, isLand);
     }
     
+    // Draw vertices on top
+    const vertices = boardData.vertices || {};
+    const vertexPositions = {};
+    for (const key in vertices) {
+        const coords = parseKey(key);
+        const pos = cubeToPixel(coords.x, coords.y, coords.z, hexRadius);
+        vertexPositions[key] = pos;
+        drawVertex(ctx, pos.x, pos.y);
+    }
+    
+    // Draw edges on top
+    const edges = boardData.edges || {};
+    for (const key in edges) {
+        const edge = edges[key];
+        const vertexKeys = edge.neighbors.vertices || [];
+        if (vertexKeys.length >= 2) {
+            const pos1 = vertexPositions[vertexKeys[0]];
+            const pos2 = vertexPositions[vertexKeys[1]];
+            if (pos1 && pos2) {
+                drawEdge(ctx, pos1.x, pos1.y, pos2.x, pos2.y);
+            }
+        }
+    }
+    
+    return { canvas, hexPositions, vertexPositions };
     return { canvas, hexPositions };
 }
 

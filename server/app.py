@@ -81,10 +81,11 @@ def handle_join(data):
     emit_user_list()
 
     if reconnecting_to_game:
+        current_player = current_game.players[current_game.current_player_index]
         emit('game_state', {
-            'players': current_game.players,
+            'players': current_game.get_player_names(),
             'observers': current_game.observers,
-            'current_player': current_game.players[current_game.current_player_index],
+            'current_player': current_player.name if current_player else None,
             'board': current_game.get_board_data()
         })
 
@@ -113,10 +114,11 @@ def handle_start_game():
     current_game = Game(players, observers)
     current_game.start()
 
+    current_player = current_game.players[current_game.current_player_index]
     emit('game_started', {
-        'players': current_game.players,
+        'players': current_game.get_player_names(),
         'observers': current_game.observers,
-        'current_player': current_game.players[current_game.current_player_index],
+        'current_player': current_player.name if current_player else None,
         'board': current_game.get_board_data()
     }, broadcast=True)
 
@@ -126,7 +128,8 @@ def handle_next_turn(data):
     if current_game is None or current_game.game_state != "started":
         return
 
-    current_player_name = current_game.players[current_game.current_player_index]
+    current_player = current_game.players[current_game.current_player_index]
+    current_player_name = current_player.name if current_player else None
     requester = data.get('name')
 
     if requester != current_player_name:
@@ -135,13 +138,32 @@ def handle_next_turn(data):
 
     current_game.current_player_index = (current_game.current_player_index + 1) % len(current_game.players)
     new_current_player = current_game.players[current_game.current_player_index]
-    print(f"Turn changed. Current player: {new_current_player}")
+    new_current_player_name = new_current_player.name if new_current_player else None
+    print(f"Turn changed. Current player: {new_current_player_name}")
 
     emit('turn_changed', {
-        'players': current_game.players,
+        'players': current_game.get_player_names(),
         'observers': current_game.observers,
-        'current_player': new_current_player
+        'current_player': new_current_player_name
     }, broadcast=True)
+
+
+@socketio.on('set_color')
+def handle_set_color(data):
+    if current_game is None or current_game.game_state != "started":
+        return
+    
+    name = data.get('name', '')
+    color = data.get('color', '')
+    
+    if not name or not color:
+        return
+    
+    if current_game.set_player_color(name, color):
+        emit('player_color_changed', {
+            'name': name,
+            'color': color
+        }, broadcast=True)
 
 
 def emit_user_list():
