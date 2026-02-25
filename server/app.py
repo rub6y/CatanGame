@@ -3,12 +3,16 @@ import os
 from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
 
+from game.game import Game
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'catan-secret-key'
 socketio = SocketIO(app)
 
 DATA_FILE = os.path.join(os.path.dirname(__file__), 'data', 'users.json')
 MAX_PLAYERS = 4
+MIN_PLAYERS = 2
+current_game = None
 
 
 def load_users():
@@ -69,6 +73,30 @@ def handle_join(data):
 @socketio.on('request_users')
 def handle_request_users():
     emit_user_list()
+
+
+@socketio.on('start_game')
+def handle_start_game():
+    global current_game
+
+    if current_game is not None and current_game.game_state == "started":
+        emit('error', {'message': 'A game is already in progress'})
+        return
+
+    users = load_users()
+    players = [u.get('name') for u in users if u.get('role') == 'player']
+
+    if len(players) < MIN_PLAYERS:
+        emit('error', {'message': f'Need at least {MIN_PLAYERS} players to start'})
+        return
+
+    current_game = Game(players)
+    current_game.start()
+
+    emit('game_started', {
+        'players': current_game.players,
+        'current_player': current_game.players[current_game.current_player_index]
+    }, broadcast=True)
 
 
 def emit_user_list():
