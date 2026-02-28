@@ -6,6 +6,7 @@ let currentRole = null;
 let gameStarted = false;
 let currentPlayer = null;
 let selectedBuilding = null;  // 'settlement', 'road', or null
+let hasRolledDice = false;
 
 // DOM elements
 const joinScreen = document.getElementById('join-screen');
@@ -27,6 +28,8 @@ const nextTurnBtn = document.getElementById('next-turn-btn');
 const colorPicker = document.getElementById('color-picker');
 const placeSettlementBtn = document.getElementById('place-settlement-btn');
 const placeRoadBtn = document.getElementById('place-road-btn');
+const rollDiceBtn = document.getElementById('roll-dice-btn');
+const diceDisplay = document.getElementById('dice-display');
 
 // Store current board data for click handling
 let currentBoardData = null;
@@ -70,7 +73,18 @@ startGameBtn.addEventListener('click', () => {
  * Handle Next Turn button click
  */
 nextTurnBtn.addEventListener('click', () => {
+    if (!hasRolledDice) {
+        alert('You must roll the dice before advancing to the next turn!');
+        return;
+    }
     socket.emit('next_turn', { name: currentUser });
+});
+
+/**
+ * Handle Roll Dice button click
+ */
+rollDiceBtn.addEventListener('click', () => {
+    socket.emit('roll_dice', { name: currentUser });
 });
 
 /**
@@ -253,6 +267,7 @@ socket.on('game_started', (data) => {
     gameStarted = true;
     currentPlayer = data.current_player;
     currentRole = 'player';
+    hasRolledDice = false;
     userScreen.classList.add('hidden');
     gameScreen.classList.remove('hidden');
     renderGameSidebar(data);
@@ -262,6 +277,13 @@ socket.on('game_started', (data) => {
     currentBoardData = data.board;
     if (data.board) {
         window.BoardRenderer.render(data.board, 'board-canvas');
+    }
+    
+    // Enable dice button for the first player
+    if (currentPlayer === currentUser) {
+        rollDiceBtn.disabled = false;
+        rollDiceBtn.textContent = 'Roll Dice';
+        diceDisplay.innerHTML = '';
     }
     
     console.log('Game started! Player order:', data.players);
@@ -295,6 +317,14 @@ socket.on('turn_changed', (data) => {
     renderGameSidebar({ players: data.players, observers: data.observers });
     updateConsoleVisibility();
     console.log('Turn changed. Current player:', data.current_player);
+    hasRolledDice = false;
+    
+    // Enable dice button for the current player
+    if (currentPlayer === currentUser) {
+        rollDiceBtn.disabled = false;
+        rollDiceBtn.textContent = 'Roll Dice';
+        diceDisplay.innerHTML = '';
+    }
 });
 
 socket.on('player_color_changed', (data) => {
@@ -315,6 +345,14 @@ socket.on('player_color_changed', (data) => {
     if (currentBoardData) {
         window.BoardRenderer.render(currentBoardData, 'board-canvas');
     }
+});
+
+socket.on('dice_rolled', (data) => {
+    console.log(`Player ${data.player} rolled ${data.dice1} + ${data.dice2} = ${data.total}`);
+    diceDisplay.innerHTML = `<span class="die">${data.dice1}</span><span class="die">${data.dice2}</span>`;
+    rollDiceBtn.disabled = true;
+    rollDiceBtn.textContent = `Rolled: ${data.total}`;
+    hasRolledDice = true;
 });
 
 socket.on('board_updated', (data) => {

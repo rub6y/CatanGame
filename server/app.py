@@ -166,6 +166,36 @@ def handle_set_color(data):
         }, broadcast=True)
 
 
+@socketio.on('roll_dice')
+def handle_roll_dice(data):
+    if current_game is None or current_game.game_state != "started":
+        return
+    
+    name = data.get('name', '')
+    
+    if not name:
+        return
+    
+    current_player = current_game.players[current_game.current_player_index]
+    if current_player.name != name:
+        emit('error', {'message': f'Only {current_player.name} can roll dice'})
+        return
+    
+    import random
+    dice1 = random.randint(1, 6)
+    dice2 = random.randint(1, 6)
+    total = dice1 + dice2
+    
+    print(f"Player {name} rolled {dice1} + {dice2} = {total}")
+    
+    emit('dice_rolled', {
+        'player': name,
+        'dice1': dice1,
+        'dice2': dice2,
+        'total': total
+    }, broadcast=True)
+
+
 @socketio.on('place_settlement')
 def handle_place_settlement(data):
     if current_game is None or current_game.game_state != "started":

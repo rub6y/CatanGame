@@ -205,6 +205,33 @@ button:hover {
     padding: 0.8rem 2rem;
 }
 
+.dice-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.dice-display {
+    display: flex;
+    gap: 0.3rem;
+    font-size: 1.5rem;
+    font-weight: bold;
+    min-width: 60px;
+    justify-content: center;
+}
+
+.dice-display .die {
+    background-color: white;
+    color: #2c3e50;
+    width: 30px;
+    height: 30px;
+    border-radius: 5px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1rem;
+}
+
 /* Cursor when in placement mode */
 .game-board.placement-mode {
     cursor: crosshair;
