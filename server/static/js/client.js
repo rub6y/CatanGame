@@ -19,6 +19,7 @@ const observerList = document.getElementById('observers');
 const playerCount = document.getElementById('player-count');
 const rolePlayer = document.getElementById('role-player');
 const roleObserver = document.getElementById('role-observer');
+const joinColorPicker = document.getElementById('join-color-picker');
 const startGameBtn = document.getElementById('start-game-btn');
 const gamePlayersList = document.getElementById('game-players');
 const gameObserversList = document.getElementById('game-observers');
@@ -46,10 +47,11 @@ function join() {
     }
 
     const role = document.querySelector('input[name="role"]:checked').value;
+    const color = joinColorPicker.value;
 
     currentUser = name;
     currentRole = role;
-    socket.emit('join', { name: name, role: role });
+    socket.emit('join', { name: name, role: role, color: color });
     joinScreen.classList.add('hidden');
     userScreen.classList.remove('hidden');
     updateStartButton();

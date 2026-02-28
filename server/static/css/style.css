@@ -83,6 +83,32 @@ button:hover {
     cursor: pointer;
 }
 
+.color-selection {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.color-selection label {
+    font-size: 0.9rem;
+}
+
+#join-color-picker {
+    width: 50px;
+    height: 40px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.role-selection input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
 #user-screen {
     margin-top: 1rem;
 }

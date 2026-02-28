@@ -70,6 +70,8 @@ def handle_join(data):
     if not name:
         return
 
+    color = data.get('color', '')
+
     reconnecting_to_game = False
 
     if current_game is not None and current_game.game_state == "started":
@@ -86,8 +88,11 @@ def handle_join(data):
     existing_user = get_user_by_name(users, name)
     if existing_user:
         users = remove_user_by_name(users, name)
-        color = existing_user.get('color')
-    else:
+        # Use provided color, or existing saved color, or random
+        if not color:
+            color = existing_user.get('color')
+    
+    if not color:
         color = get_random_color()
 
     if role == 'player':
