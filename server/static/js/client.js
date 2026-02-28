@@ -219,6 +219,12 @@ function renderGameSidebar(data) {
         li.textContent = name;
         if (name === currentPlayer) {
             li.classList.add('current-turn');
+            // Use player's color for current turn highlight
+            const playerData = currentBoardData?.players?.find(p => p.name === name);
+            if (playerData?.color) {
+                li.style.backgroundColor = playerData.color;
+                li.style.color = getContrastColor(playerData.color);
+            }
         }
         gamePlayersList.appendChild(li);
     });
@@ -228,6 +234,17 @@ function renderGameSidebar(data) {
         li.textContent = name;
         gameObserversList.appendChild(li);
     });
+}
+
+/**
+ * Get contrasting text color (black or white) based on background color
+ */
+function getContrastColor(hexColor) {
+    const r = parseInt(hexColor.slice(1, 3), 16);
+    const g = parseInt(hexColor.slice(3, 5), 16);
+    const b = parseInt(hexColor.slice(5, 7), 16);
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance > 0.5 ? '#2c3e50' : '#ffffff';
 }
 
 /**
