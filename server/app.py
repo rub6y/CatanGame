@@ -1,5 +1,6 @@
 import json
 import os
+import random
 from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
 
@@ -14,6 +15,23 @@ MAX_PLAYERS = 4
 MIN_PLAYERS = 2
 current_game = None
 
+COLOR_PALETTE = [
+    '#3498db',  # Blue
+    '#27ae60',  # Green
+    '#f1c40f',  # Yellow
+    '#e74c3c',  # Red
+    '#9b59b6',  # Purple
+    '#e67e22',  # Orange
+    '#ff6b9d',  # Pink
+    '#ecf0f1',  # White
+    '#2c3e50',  # Black
+]
+
+
+def get_random_color():
+    """Get a random color from the palette."""
+    return random.choice(COLOR_PALETTE)
+
 
 def load_users():
     if os.path.exists(DATA_FILE):
@@ -26,11 +44,6 @@ def load_users():
 def save_users(users):
     with open(DATA_FILE, 'w') as f:
         json.dump({'users': users}, f)
-
-
-@app.route('/')
-def index():
-    return render_template('index.html')
 
 
 def get_user_by_name(users, name):
@@ -68,6 +81,9 @@ def handle_join(data):
     existing_user = get_user_by_name(users, name)
     if existing_user:
         users = remove_user_by_name(users, name)
+        color = existing_user.get('color')
+    else:
+        color = get_random_color()
 
     if role == 'player':
         player_count = sum(1 for u in users if u.get('role') == 'player')
@@ -75,7 +91,7 @@ def handle_join(data):
             emit('error', {'message': f'Cannot join as player. Max {MAX_PLAYERS} players allowed.'})
             return
 
-    users.append({'name': name, 'role': role})
+    users.append({'name': name, 'role': role, 'color': color})
     save_users(users)
 
     emit_user_list()
@@ -106,12 +122,18 @@ def handle_start_game():
     users = load_users()
     players = [u.get('name') for u in users if u.get('role') == 'player']
     observers = [u.get('name') for u in users if u.get('role') == 'observer']
+    
+    # Build player colors dict from users
+    player_colors = {}
+    for u in users:
+        if u.get('role') == 'player' and u.get('color'):
+            player_colors[u.get('name')] = u.get('color')
 
     if len(players) < MIN_PLAYERS:
         emit('error', {'message': f'Need at least {MIN_PLAYERS} players to start'})
         return
 
-    current_game = Game(players, observers)
+    current_game = Game(players, observers, player_colors)
     current_game.start()
 
     current_player = current_game.players[current_game.current_player_index]
@@ -164,6 +186,14 @@ def handle_set_color(data):
             'name': name,
             'color': color
         }, broadcast=True)
+        
+        # Save color to users.json
+        users = load_users()
+        for user in users:
+            if user.get('name') == name:
+                user['color'] = color
+                break
+        save_users(users)
 
 
 @socketio.on('roll_dice')

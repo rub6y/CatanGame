@@ -59,11 +59,14 @@ class Game:
         (0, -1, 1),   # Lower right
     ]
     
-    def __init__(self, player_names: list, observers: list):
+    def __init__(self, player_names: list, observers: list, player_colors: dict = None):
         # Create Player objects with colors
+        if player_colors is None:
+            player_colors = {}
+        
         self.players = []
         for i, name in enumerate(player_names):
-            color = self.PLAYER_COLORS[i] if i < len(self.PLAYER_COLORS) else '#ffffff'
+            color = player_colors.get(name) or (self.PLAYER_COLORS[i] if i < len(self.PLAYER_COLORS) else '#ffffff')
             player = Player(name, color)
             player.resources = {
                 'wood': random.randint(0, 3),
