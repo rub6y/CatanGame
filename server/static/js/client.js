@@ -404,6 +404,7 @@ socket.on('board_updated', (data) => {
     if (data.board) {
         window.BoardRenderer.render(data.board, 'board-canvas');
     }
+    renderResourcePanel();
 });
 
 socket.on('error', (data) => {
