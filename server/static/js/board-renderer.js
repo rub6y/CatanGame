@@ -71,10 +71,11 @@ function parseKey(key) {
  * @param {number} centerY - Center y position
  * @param {number} radius - Hex radius
  * @param {string} color - Fill color
- * @param {number|null} number - Number token (2-12) or null
+ * @param {number|null} number - Dice number to display
  * @param {boolean} isLand - Whether this is a land hex (not ocean)
+ * @param {boolean} isHighlighted - Whether this hex should be highlighted
  */
-function drawHex(ctx, centerX, centerY, radius, color, number, isLand) {
+function drawHex(ctx, centerX, centerY, radius, color, number, isLand, isHighlighted = false) {
     ctx.beginPath();
     for (let i = 0; i < 6; i++) {
         const angle = Math.PI / 3 * i - Math.PI / 6;
@@ -88,14 +89,24 @@ function drawHex(ctx, centerX, centerY, radius, color, number, isLand) {
     }
     ctx.closePath();
     
+    // Highlight glow effect
+    if (isHighlighted) {
+        ctx.shadowColor = '#f1c40f';
+        ctx.shadowBlur = 20;
+    }
+    
     ctx.fillStyle = color;
     ctx.fill();
-    ctx.strokeStyle = BOARD_CONFIG.colors.border;
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = isHighlighted ? '#f1c40f' : BOARD_CONFIG.colors.border;
+    ctx.lineWidth = isHighlighted ? 4 : 2;
     ctx.stroke();
     
+    // Reset shadow
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    
     if (isLand && number !== null && number !== undefined) {
-        drawNumberToken(ctx, centerX, centerY, number);
+        drawNumberToken(ctx, centerX, centerY, number, isHighlighted);
     }
 }
 
@@ -106,20 +117,21 @@ function drawHex(ctx, centerX, centerY, radius, color, number, isLand) {
  * @param {number} centerX - Center x position
  * @param {number} centerY - Center y position
  * @param {number} number - The dice number (2-12)
+ * @param {boolean} isHighlighted - Whether this hex should be highlighted
  */
-function drawNumberToken(ctx, centerX, centerY, number) {
+function drawNumberToken(ctx, centerX, centerY, number, isHighlighted = false) {
     const tokenRadius = 12;
     
     ctx.beginPath();
     ctx.arc(centerX, centerY, tokenRadius, 0, Math.PI * 2);
-    ctx.fillStyle = BOARD_CONFIG.colors.numberCircle;
+    ctx.fillStyle = isHighlighted ? '#f1c40f' : BOARD_CONFIG.colors.numberCircle;
     ctx.fill();
-    ctx.strokeStyle = BOARD_CONFIG.colors.border;
+    ctx.strokeStyle = isHighlighted ? '#f39c12' : BOARD_CONFIG.colors.border;
     ctx.lineWidth = 1;
     ctx.stroke();
     
     ctx.font = 'bold 14px Arial';
-    ctx.fillStyle = BOARD_CONFIG.colors.numberText;
+    ctx.fillStyle = isHighlighted ? '#2c3e50' : BOARD_CONFIG.colors.numberText;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(number.toString(), centerX, centerY);
@@ -224,13 +236,14 @@ function drawRoad(ctx, x1, y1, x2, y2, playerColor) {
 }
 
 /**
- * Main render function - draws the entire board.
+ * Render the Catan board on a canvas.
  * 
- * @param {object} boardData - Board data from server containing hexes, vertices, edges, players
+ * @param {object} boardData - Board data from server
  * @param {string} canvasId - ID of the canvas element
+ * @param {number|null} highlightNumber - Optional number to highlight on hexes
  * @returns {object} - Object with canvas and position data for click detection
  */
-function renderBoard(boardData, canvasId) {
+function renderBoard(boardData, canvasId, highlightNumber = null) {
     const canvas = document.getElementById(canvasId);
     if (!canvas) {
         console.error('Canvas not found:', canvasId);
@@ -289,8 +302,9 @@ function renderBoard(boardData, canvasId) {
         const hex = hexes[key];
         const pos = hexPositions[key];
         const isLand = hex.type !== 'ocean';
+        const isHighlighted = highlightNumber !== null && hex.number === highlightNumber;
         
-        drawHex(ctx, pos.x, pos.y, hexRadius - 2, getHexColor(hex.type), hex.number, isLand);
+        drawHex(ctx, pos.x, pos.y, hexRadius - 2, getHexColor(hex.type), hex.number, isLand, isHighlighted);
     }
     
     // Calculate and store vertex positions

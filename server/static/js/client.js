@@ -396,6 +396,16 @@ socket.on('dice_rolled', (data) => {
     rollDiceBtn.disabled = true;
     rollDiceBtn.textContent = `Rolled: ${data.total}`;
     hasRolledDice = true;
+    
+    // Highlight hexes matching the rolled number
+    if (currentBoardData) {
+        window.BoardRenderer.render(currentBoardData, 'board-canvas', data.total);
+        
+        // Clear highlight after 1 second
+        setTimeout(() => {
+            window.BoardRenderer.render(currentBoardData, 'board-canvas', null);
+        }, 1000);
+    }
 });
 
 socket.on('board_updated', (data) => {
