@@ -368,6 +368,9 @@ socket.on('game_started', (data) => {
     // Render resource panel
     renderResourcePanel();
     
+    // Update button colors
+    updateButtonColors();
+    
     // Enable dice button for the first player
     if (currentPlayer === currentUser) {
         rollDiceBtn.disabled = false;
@@ -405,6 +408,9 @@ socket.on('game_state', (data) => {
         colorPicker.value = currentPlayerData.color;
     }
     
+    // Update button colors
+    updateButtonColors();
+    
     console.log('Reconnected to game. Current player:', data.current_player);
 });
 
@@ -441,6 +447,11 @@ socket.on('player_color_changed', (data) => {
     // Re-render board with updated player colors
     if (currentBoardData) {
         window.BoardRenderer.render(currentBoardData, 'board-canvas');
+    }
+    // Update buttons and sidebar with new color
+    updateButtonColors();
+    if (currentPlayer) {
+        renderGameSidebar({ players: currentBoardData?.players?.map(p => p.name) || [], observers: [] });
     }
 });
 
