@@ -130,8 +130,8 @@ button:hover {
     display: flex;
     gap: 1rem;
     margin-top: 1rem;
-    width: 950px;
-    height: 500px;
+    width: 1050px;
+    height: 550px;
 }
 
 .game-sidebar {
