@@ -188,11 +188,17 @@ def handle_roll_dice(data):
     
     print(f"Player {name} rolled {dice1} + {dice2} = {total}")
     
+    current_game.distribute_resources(total)
+    
     emit('dice_rolled', {
         'player': name,
         'dice1': dice1,
         'dice2': dice2,
         'total': total
+    }, broadcast=True)
+    
+    emit('board_updated', {
+        'board': current_game.get_board_data()
     }, broadcast=True)
 
 

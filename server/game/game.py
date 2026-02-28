@@ -472,6 +472,38 @@ class Game:
             'players': [p.to_dict() for p in self.players]
         }
     
+    def distribute_resources(self, dice_total: int):
+        """Distribute resources to players based on dice roll.
+        
+        Each settlement adjacent to a hex with matching number receives 1 resource.
+        Skips distribution for 7 (robber not implemented).
+        
+        Args:
+            dice_total: The sum of the two dice rolled
+        """
+        if dice_total == 7:
+            return
+        
+        for vertex_key, vertex in self.vertices.items():
+            if not vertex.building or vertex.building.get('type') != 'settlement':
+                continue
+            
+            player_name = vertex.building.get('player')
+            if not player_name:
+                continue
+            
+            player = self.get_player(player_name)
+            if not player:
+                continue
+            
+            for hex_key in vertex.neighbors.get('hexes', []):
+                if hex_key not in self.hexes:
+                    continue
+                
+                hex_obj = self.hexes[hex_key]
+                if hex_obj.number == dice_total and hex_obj.type not in ('desert', 'ocean'):
+                    player.resources[hex_obj.type] = player.resources.get(hex_obj.type, 0) + 1
+    
     def start(self):
         """Start the game and shuffle player order."""
         random.shuffle(self.players)
