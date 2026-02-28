@@ -35,6 +35,7 @@ const placeRoadBtn = document.getElementById('place-road-btn');
 const rollDiceBtn = document.getElementById('roll-dice-btn');
 const diceDisplay = document.getElementById('dice-display');
 const resourceDisplay = document.getElementById('resource-display');
+const bankDisplay = document.getElementById('bank-display');
 
 // Store current board data for click handling
 let currentBoardData = null;
@@ -294,6 +295,38 @@ function renderResourcePanel() {
 }
 
 /**
+ * Render bank panel - shows bank resources
+ */
+function renderBank() {
+    if (!currentBoardData || !currentBoardData.bank) {
+        return;
+    }
+    
+    const bank = currentBoardData.bank;
+    const resourceIcons = {
+        wood: '🌲',
+        brick: '🧱',
+        sheep: '🐑',
+        wheat: '🌾',
+        ore: '🪨'
+    };
+    const resourceNames = {
+        wood: 'Wood',
+        brick: 'Brick',
+        sheep: 'Sheep',
+        wheat: 'Wheat',
+        ore: 'Ore'
+    };
+    
+    let html = '';
+    for (const [type, count] of Object.entries(bank)) {
+        html += `<div class="bank-resource bank-${type}"><span>${resourceIcons[type]} ${resourceNames[type]}</span><span>${count}</span></div>`;
+    }
+    
+    bankDisplay.innerHTML = html;
+}
+
+/**
  * Update console visibility and button states based on current turn
  */
 function updateConsoleVisibility() {
@@ -378,6 +411,9 @@ socket.on('game_started', (data) => {
     // Render resource panel
     renderResourcePanel();
     
+    // Render bank
+    renderBank();
+    
     // Update button colors
     updateButtonColors();
     
@@ -410,6 +446,7 @@ socket.on('game_state', (data) => {
     if (data.board) {
         window.BoardRenderer.render(data.board, 'board-canvas');
         renderResourcePanel();
+        renderBank();
     }
     
     // Set color picker to current user's color
@@ -491,6 +528,7 @@ socket.on('board_updated', (data) => {
         window.BoardRenderer.render(data.board, 'board-canvas', highlightNumber);
     }
     renderResourcePanel();
+    renderBank();
     
     // Clear highlight after 2 seconds if there was one
     if (data.highlight) {

@@ -2,6 +2,7 @@ import random
 
 from game.hex_models import Hex, Vertex, Edge
 from game.player import Player
+from game.bank import Bank
 
 
 class Game:
@@ -64,17 +65,19 @@ class Game:
         if player_colors is None:
             player_colors = {}
         
+        # Initialize bank
+        self.bank = Bank()
+        
         self.players = []
         for i, name in enumerate(player_names):
             color = player_colors.get(name) or (self.PLAYER_COLORS[i] if i < len(self.PLAYER_COLORS) else '#ffffff')
             player = Player(name, color)
-            player.resources = {
-                'wood': random.randint(0, 3),
-                'brick': random.randint(0, 3),
-                'sheep': random.randint(0, 3),
-                'wheat': random.randint(0, 3),
-                'ore': random.randint(0, 3)
-            }
+            # Take initial resources from bank
+            for resource_type in ['wood', 'brick', 'sheep', 'wheat', 'ore']:
+                amount = random.randint(0, 3)
+                for _ in range(amount):
+                    if self.bank.take(resource_type):
+                        player.resources[resource_type] = player.resources.get(resource_type, 0) + 1
             self.players.append(player)
         
         self.observers = observers
@@ -472,7 +475,8 @@ class Game:
             'hexes': hexes,
             'vertices': vertices,
             'edges': edges,
-            'players': [p.to_dict() for p in self.players]
+            'players': [p.to_dict() for p in self.players],
+            'bank': self.bank.get_all()
         }
     
     def distribute_resources(self, dice_total: int):
@@ -507,17 +511,20 @@ class Game:
                 
                 hex_obj = self.hexes[hex_key]
                 if hex_obj.number == dice_total and hex_obj.type not in ('desert', 'ocean'):
-                    player.resources[hex_obj.type] = player.resources.get(hex_obj.type, 0) + 1
-                    
-                    if player_name not in gained_resources:
-                        gained_resources[player_name] = {}
-                    gained_resources[player_name][hex_obj.type] = gained_resources[player_name].get(hex_obj.type, 0) + 1
+                    # Try to take from bank
+                    if self.bank.take(hex_obj.type):
+                        player.resources[hex_obj.type] = player.resources.get(hex_obj.type, 0) + 1
+                        
+                        if player_name not in gained_resources:
+                            gained_resources[player_name] = {}
+                        gained_resources[player_name][hex_obj.type] = gained_resources[player_name].get(hex_obj.type, 0) + 1
         
         if gained_resources:
             print(f"Resources distributed (rolled {dice_total}):")
             for player_name, resources in gained_resources.items():
                 resource_str = ', '.join(f"+{count} {resource}" for resource, count in resources.items())
                 print(f"  {player_name}: {resource_str}")
+            print(f"  Bank: {self.bank}")
     
     def start(self):
         """Start the game and shuffle player order."""

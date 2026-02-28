@@ -297,6 +297,39 @@ button:hover {
 .resource-sidebar .res-wheat { color: #f1c40f; }
 .resource-sidebar .res-ore { color: #7f8c8d; }
 
+#bank-panel {
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #34495e;
+}
+
+#bank-panel h2 {
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+    color: #ecf0f1;
+}
+
+.bank-display {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    font-size: 0.9rem;
+}
+
+.bank-display .bank-resource {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.2rem 0.4rem;
+    background-color: #1a252f;
+    border-radius: 3px;
+}
+
+.bank-display .bank-wood { color: #27ae60; }
+.bank-display .bank-brick { color: #e74c3c; }
+.bank-display .bank-sheep { color: #9b59b6; }
+.bank-display .bank-wheat { color: #f1c40f; }
+.bank-display .bank-ore { color: #7f8c8d; }
+
 .resource-label {
     font-size: 0.9rem;
     color: #bdc3c7;
