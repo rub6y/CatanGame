@@ -319,6 +319,12 @@ socket.on('game_started', (data) => {
         window.BoardRenderer.render(data.board, 'board-canvas');
     }
     
+    // Set color picker to current user's color
+    const currentPlayerData = data.board?.players?.find(p => p.name === currentUser);
+    if (currentPlayerData?.color) {
+        colorPicker.value = currentPlayerData.color;
+    }
+    
     // Render resource panel
     renderResourcePanel();
     
@@ -351,6 +357,12 @@ socket.on('game_state', (data) => {
     if (data.board) {
         window.BoardRenderer.render(data.board, 'board-canvas');
         renderResourcePanel();
+    }
+    
+    // Set color picker to current user's color
+    const currentPlayerData = data.board?.players?.find(p => p.name === currentUser);
+    if (currentPlayerData?.color) {
+        colorPicker.value = currentPlayerData.color;
     }
     
     console.log('Reconnected to game. Current player:', data.current_player);
