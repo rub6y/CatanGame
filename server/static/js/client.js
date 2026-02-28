@@ -401,10 +401,10 @@ socket.on('dice_rolled', (data) => {
     if (currentBoardData) {
         window.BoardRenderer.render(currentBoardData, 'board-canvas', data.total);
         
-        // Clear highlight after 1 second
+        // Clear highlight after 2 seconds
         setTimeout(() => {
             window.BoardRenderer.render(currentBoardData, 'board-canvas', null);
-        }, 1000);
+        }, 2000);
     }
 });
 
@@ -412,9 +412,17 @@ socket.on('board_updated', (data) => {
     console.log('Board updated');
     currentBoardData = data.board;
     if (data.board) {
-        window.BoardRenderer.render(data.board, 'board-canvas');
+        const highlightNumber = data.highlight || null;
+        window.BoardRenderer.render(data.board, 'board-canvas', highlightNumber);
     }
     renderResourcePanel();
+    
+    // Clear highlight after 2 seconds if there was one
+    if (data.highlight) {
+        setTimeout(() => {
+            window.BoardRenderer.render(currentBoardData, 'board-canvas', null);
+        }, 2000);
+    }
 });
 
 socket.on('error', (data) => {

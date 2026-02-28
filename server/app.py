@@ -198,7 +198,8 @@ def handle_roll_dice(data):
     }, broadcast=True)
     
     emit('board_updated', {
-        'board': current_game.get_board_data()
+        'board': current_game.get_board_data(),
+        'highlight': total
     }, broadcast=True)
 
 
