@@ -232,6 +232,39 @@ button:hover {
     font-size: 1rem;
 }
 
+.resource-panel {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    background-color: #1a252f;
+    border-radius: 5px;
+    margin-left: 1rem;
+}
+
+.resource-label {
+    font-size: 0.9rem;
+    color: #bdc3c7;
+}
+
+.resource-display {
+    display: flex;
+    gap: 0.5rem;
+    font-size: 1.1rem;
+}
+
+.resource-display .resource {
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+}
+
+.resource-display .res-wood { color: #27ae60; }
+.resource-display .res-brick { color: #e74c3c; }
+.resource-display .res-sheep { color: #9b59b6; }
+.resource-display .res-wheat { color: #f1c40f; }
+.resource-display .res-ore { color: #7f8c8d; }
+
 /* Cursor when in placement mode */
 .game-board.placement-mode {
     cursor: crosshair;

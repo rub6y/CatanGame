@@ -64,7 +64,15 @@ class Game:
         self.players = []
         for i, name in enumerate(player_names):
             color = self.PLAYER_COLORS[i] if i < len(self.PLAYER_COLORS) else '#ffffff'
-            self.players.append(Player(name, color))
+            player = Player(name, color)
+            player.resources = {
+                'wood': random.randint(0, 3),
+                'brick': random.randint(0, 3),
+                'sheep': random.randint(0, 3),
+                'wheat': random.randint(0, 3),
+                'ore': random.randint(0, 3)
+            }
+            self.players.append(player)
         
         self.observers = observers
         self.current_player_index = 0

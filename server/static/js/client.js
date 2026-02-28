@@ -30,6 +30,8 @@ const placeSettlementBtn = document.getElementById('place-settlement-btn');
 const placeRoadBtn = document.getElementById('place-road-btn');
 const rollDiceBtn = document.getElementById('roll-dice-btn');
 const diceDisplay = document.getElementById('dice-display');
+const resourcePanel = document.getElementById('resource-panel');
+const resourceDisplay = document.getElementById('resource-display');
 
 // Store current board data for click handling
 let currentBoardData = null;
@@ -228,6 +230,37 @@ function renderGameSidebar(data) {
 }
 
 /**
+ * Render resource panel - shows current user's resources
+ */
+function renderResourcePanel() {
+    if (!currentBoardData || !currentBoardData.players) {
+        return;
+    }
+    
+    const player = currentBoardData.players.find(p => p.name === currentUser);
+    if (!player) {
+        return;
+    }
+    
+    const resources = player.resources || {};
+    const resourceIcons = {
+        wood: '🌲',
+        brick: '🧱',
+        sheep: '🐑',
+        wheat: '🌾',
+        ore: '🪨'
+    };
+    
+    let html = '';
+    for (const [type, count] of Object.entries(resources)) {
+        html += `<span class="resource res-${type}">${resourceIcons[type]}${count}</span>`;
+    }
+    
+    resourceDisplay.innerHTML = html;
+    resourcePanel.classList.remove('hidden');
+}
+
+/**
  * Update console visibility and button states based on current turn
  */
 function updateConsoleVisibility() {
@@ -279,6 +312,9 @@ socket.on('game_started', (data) => {
         window.BoardRenderer.render(data.board, 'board-canvas');
     }
     
+    // Render resource panel
+    renderResourcePanel();
+    
     // Enable dice button for the first player
     if (currentPlayer === currentUser) {
         rollDiceBtn.disabled = false;
@@ -307,6 +343,7 @@ socket.on('game_state', (data) => {
     currentBoardData = data.board;
     if (data.board) {
         window.BoardRenderer.render(data.board, 'board-canvas');
+        renderResourcePanel();
     }
     
     console.log('Reconnected to game. Current player:', data.current_player);
@@ -316,6 +353,7 @@ socket.on('turn_changed', (data) => {
     currentPlayer = data.current_player;
     renderGameSidebar({ players: data.players, observers: data.observers });
     updateConsoleVisibility();
+    renderResourcePanel();
     console.log('Turn changed. Current player:', data.current_player);
     hasRolledDice = false;
     
