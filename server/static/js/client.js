@@ -317,12 +317,12 @@ function updateConsoleVisibility() {
 }
 
 /**
- * Update button colors based on current player
+ * Update button colors based on current user
  */
 function updateButtonColors() {
     const buttons = [rollDiceBtn, placeSettlementBtn, placeRoadBtn, nextTurnBtn];
-    const currentPlayerData = currentBoardData?.players?.find(p => p.name === currentPlayer);
-    const playerColor = currentPlayerData?.color || '#e67e22';
+    const currentUserData = currentBoardData?.players?.find(p => p.name === currentUser);
+    const playerColor = currentUserData?.color || '#e67e22';
     const textColor = getContrastColor(playerColor);
     
     buttons.forEach(btn => {
