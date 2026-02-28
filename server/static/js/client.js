@@ -295,7 +295,7 @@ function renderResourcePanel() {
 }
 
 /**
- * Render bank panel - shows bank resources
+ * Render bank panel - shows bank resources as percentage
  */
 function renderBank() {
     if (!currentBoardData || !currentBoardData.bank) {
@@ -318,9 +318,12 @@ function renderBank() {
         ore: 'Ore'
     };
     
+    const RESOURCE_LIMIT = 19;
+    
     let html = '';
     for (const [type, count] of Object.entries(bank)) {
-        html += `<div class="bank-resource bank-${type}"><span>${resourceIcons[type]} ${resourceNames[type]}</span><span>${count}</span></div>`;
+        const percentage = Math.round((count / RESOURCE_LIMIT) * 100 / 25) * 25;
+        html += `<div class="bank-resource bank-${type}"><span>${resourceIcons[type]} ${resourceNames[type]}</span><span>${percentage}%</span></div>`;
     }
     
     bankDisplay.innerHTML = html;
