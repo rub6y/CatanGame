@@ -1,9 +1,8 @@
 # AGENTS.md - CatanPro Development Guide
 
 ## Project Overview
-This is a Catan board game web application using:
-- **Backend**: Python with Flask and Flask-SocketIO for server/game logic
-- **Frontend**: Vanilla JavaScript and HTML (no React/framework)
+- **Backend**: Python with Flask and Flask-SocketIO
+- **Frontend**: Vanilla JavaScript and HTML (no framework)
 - **Architecture**: Modular component-based design
 
 ---
@@ -11,7 +10,6 @@ This is a Catan board game web application using:
 ## Build, Lint, and Test Commands
 
 ### Python (Backend)
-
 ```bash
 # Install dependencies
 pip install -r server/requirements.txt
@@ -19,7 +17,7 @@ pip install -r server/requirements.txt
 # Run the Flask server
 python server/app.py
 
-# Run with Flask debug mode
+# Run with debug mode
 FLASK_DEBUG=1 python server/app.py
 
 # Run a single test
@@ -32,15 +30,11 @@ pytest server/tests/
 # Lint Python code
 flake8 server/
 pylint server/
-
-# Type checking (if using mypy)
-mypy server/
 ```
 
 ### JavaScript (Frontend)
 No build system - vanilla JS served directly. For linting:
 ```bash
-# Install ESLint (if configured)
 npm install eslint --save-dev
 npx eslint server/static/js/
 ```
@@ -51,35 +45,38 @@ npx eslint server/static/js/
 
 ### General Principles
 - Keep functions small and focused (single responsibility)
-- Write meaningful variable and function names
-- Comment complex logic, not obvious code
 - Maximum line length: 100 characters
 - Use 2 spaces for indentation (no tabs)
+- Comment complex logic, not obvious code
 
 ### Python Style
 
-**Imports**
-- Standard library first, then third-party, then local
-- Group by: stdlib → external → project
+**Imports** (order: stdlib → external → project):
+```python
+import json
+import os
+from flask import Flask, render_template
+from flask_socketio import SocketIO, emit
+from game.game import Game
+```
 - Use absolute imports: `from server.game.models import Player`
 - Avoid `from module import *`
 
-**Naming Conventions**
+**Naming Conventions**:
 - Variables/functions: `snake_case`
 - Classes: `PascalCase`
 - Constants: `UPPER_SNAKE_CASE`
 - Private methods: `_leading_underscore`
 
-**Types**
+**Types**:
 - Use type hints for function signatures
 - Prefer explicit types over `Any`
 - Use `Optional[X]` instead of `X | None`
 
-**Error Handling**
+**Error Handling**:
 - Use specific exceptions, not bare `except:`
 - Log errors before re-raising
 - Never expose stack traces to users
-- Use context managers for resource cleanup
 
 **Example**:
 ```python
@@ -100,103 +97,66 @@ def create_app(config: dict) -> Flask:
 
 ### JavaScript Style
 
-**General**
-- Use ES6+ syntax
-- Keep scripts modular in separate files
-- Avoid global variables - use modules with explicit exports
+**General**: Use ES6+ syntax, keep scripts modular, avoid global variables.
 
-**Naming Conventions**
+**Naming**:
 - Variables/functions: `camelCase`
-- Classes/Constructors: `PascalCase`
-- Constants: `UPPER_SNAKE_CASE` or `camelCase` for config objects
+- Classes: `PascalCase`
+- Constants: `UPPER_SNAKE_CASE`
 
-**Error Handling**
-- Always handle async errors with try/catch
-- Display user-friendly error messages in UI
-- Log detailed errors server-side
-
-**Example**:
-```javascript
-const PLAYER_MAX_POINTS = 10;
-
-class Player {
-  constructor(id, name) {
-    this.id = id;
-    this.name = name;
-    this.points = 0;
-  }
-
-  addPoints(points) {
-    this.points += points;
-  }
-}
-
-function calculateScore(player) {
-  return player.points;
-}
-```
+**Error Handling**: Handle async errors with try/catch, display user-friendly messages.
 
 ---
 
 ## Project Structure
-
 ```
 CatanPro/
-├── server/                 # Python backend
-│   ├── app.py            # Flask + SocketIO entry point
-│   ├── requirements.txt  # Python dependencies
-│   ├── static/           # Static assets
-│   │   ├── css/         # Stylesheets
-│   │   └── js/          # JavaScript files
-│   ├── templates/       # HTML templates
-│   ├── data/            # Game data
-│   ├── game/            # Game logic modules (create as needed)
-│   ├── sockets/         # Socket handlers (create as needed)
-│   └── tests/           # Python tests
-├── build.md             # Original project specification
-├── shell.nix            # Nix environment (optional)
-└── AGENTS.md            # This file
+├── server/
+│   ├── app.py              # Flask + SocketIO entry point
+│   ├── requirements.txt    # Python dependencies
+│   ├── static/css/         # Stylesheets
+│   ├── static/js/          # JavaScript files
+│   ├── templates/          # HTML templates
+│   ├── data/               # Game data (JSON)
+│   ├── game/               # Game logic modules
+│   ├── sockets/            # Socket handlers
+│   └── tests/              # Python tests (pytest)
+├── build.md                # Project specification
+└── AGENTS.md               # This file
 ```
-
----
-
-## Git Workflow
-
-1. Create feature branch: `git checkout -b feature/feature-name`
-2. Make changes and commit with descriptive messages
-3. Push and create PR when ready
-4. Use conventional commits: `feat:`, `fix:`, `refactor:`, `test:`
 
 ---
 
 ## Testing Guidelines
-
-### Python
 - Use `pytest` as test framework
 - Place tests in `server/tests/` directory
 - Follow naming: `test_<module>_<function>.py`
 - Use fixtures for common test setup
 - Mock external dependencies
 
-### JavaScript
-- Manual testing in browser (no test framework currently)
-- Add tests if Jest/Vitest is later configured
-
 ---
 
 ## Socket Events
+Document custom events when implementing:
+- `connect` / `disconnect` - Client connects/disconnects
+- `join` - Player joins game
+- `start_game` - Start new game
+- `next_turn` - Advance turn
+- `place_settlement` / `place_road` - Place game pieces
+- `set_color` - Set player color
+- `error` - Error response
 
-When modifying socket handlers, document event names:
-- `connect` - Client connects
-- `disconnect` - Client disconnects
-- Custom events for game actions (document as implemented)
+---
+
+## Git Workflow
+1. Create feature branch: `git checkout -b feature/feature-name`
+2. Make changes and commit with descriptive messages
+3. Use conventional commits: `feat:`, `fix:`, `refactor:`, `test:`
 
 ---
 
 ## Additional Notes
-
-- This is a Flask + SocketIO project (not React)
-- Frontend uses vanilla JavaScript in `server/static/js/`
-- HTML templates in `server/templates/`
 - Run linting before committing
 - Ensure all tests pass before submitting PRs
+- Frontend: vanilla JS in `server/static/js/`
+- Backend: Flask + SocketIO in `server/`
