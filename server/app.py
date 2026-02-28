@@ -57,6 +57,11 @@ def remove_user_by_name(users, name):
     return [u for u in users if u.get('name') != name]
 
 
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+
 @socketio.on('join')
 def handle_join(data):
     name = data.get('name', '').strip()
