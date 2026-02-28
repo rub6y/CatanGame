@@ -302,6 +302,15 @@ socket.on('player_color_changed', (data) => {
     if (data.name === currentUser) {
         colorPicker.value = data.color;
     }
+    // Update player color in currentBoardData before re-rendering
+    if (currentBoardData && currentBoardData.players) {
+        for (const player of currentBoardData.players) {
+            if (player.name === data.name) {
+                player.color = data.color;
+                break;
+            }
+        }
+    }
     // Re-render board with updated player colors
     if (currentBoardData) {
         window.BoardRenderer.render(currentBoardData, 'board-canvas');
