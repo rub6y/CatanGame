@@ -288,6 +288,9 @@ function renderResourcePanel() {
  * Update console visibility and button states based on current turn
  */
 function updateConsoleVisibility() {
+    // Update button colors based on current player
+    updateButtonColors();
+    
     if (currentRole === 'observer') {
         gameConsole.classList.add('hidden');
     } else if (currentUser === currentPlayer) {
@@ -311,6 +314,26 @@ function updateConsoleVisibility() {
     placeSettlementBtn.classList.remove('active');
     placeRoadBtn.classList.remove('active');
     gameBoard.classList.remove('placement-mode');
+}
+
+/**
+ * Update button colors based on current player
+ */
+function updateButtonColors() {
+    const buttons = [rollDiceBtn, placeSettlementBtn, placeRoadBtn, nextTurnBtn];
+    const currentPlayerData = currentBoardData?.players?.find(p => p.name === currentPlayer);
+    const playerColor = currentPlayerData?.color || '#e67e22';
+    const textColor = getContrastColor(playerColor);
+    
+    buttons.forEach(btn => {
+        if (btn.disabled) {
+            btn.style.backgroundColor = '#7f8c8d';
+            btn.style.color = '#ffffff';
+        } else {
+            btn.style.backgroundColor = playerColor;
+            btn.style.color = textColor;
+        }
+    });
 }
 
 // Socket event handlers
