@@ -9,6 +9,9 @@ let selectedBuilding = null;  // 'settlement', 'road', or null
 let hasRolledDice = false;
 
 // DOM elements
+const gameTitle = document.getElementById('game-title');
+
+// DOM elements
 const joinScreen = document.getElementById('join-screen');
 const userScreen = document.getElementById('user-screen');
 const gameScreen = document.getElementById('game-screen');
@@ -317,7 +320,7 @@ function updateConsoleVisibility() {
 }
 
 /**
- * Update button colors based on current user
+ * Update button colors and title based on current user
  */
 function updateButtonColors() {
     const buttons = [rollDiceBtn, placeSettlementBtn, placeRoadBtn, nextTurnBtn];
@@ -326,14 +329,14 @@ function updateButtonColors() {
     const textColor = getContrastColor(playerColor);
     
     buttons.forEach(btn => {
-        if (btn.disabled) {
-            btn.style.backgroundColor = '#7f8c8d';
-            btn.style.color = '#ffffff';
-        } else {
-            btn.style.backgroundColor = playerColor;
-            btn.style.color = textColor;
-        }
+        btn.style.backgroundColor = playerColor;
+        btn.style.color = textColor;
     });
+    
+    // Update title color
+    if (gameTitle) {
+        gameTitle.style.color = playerColor;
+    }
 }
 
 // Socket event handlers
