@@ -359,14 +359,15 @@ socket.on('game_started', (data) => {
     hasRolledDice = false;
     userScreen.classList.add('hidden');
     gameScreen.classList.remove('hidden');
-    renderGameSidebar(data);
-    updateConsoleVisibility();
     
-    // Store board data and render
+    // Store board data first so renderGameSidebar can access player colors
     currentBoardData = data.board;
     if (data.board) {
         window.BoardRenderer.render(data.board, 'board-canvas');
     }
+    
+    renderGameSidebar(data);
+    updateConsoleVisibility();
     
     // Set color picker to current user's color
     const currentPlayerData = data.board?.players?.find(p => p.name === currentUser);
