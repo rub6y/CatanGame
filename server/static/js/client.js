@@ -220,15 +220,21 @@ function renderGameSidebar(data) {
     data.players.forEach(name => {
         const li = document.createElement('li');
         li.textContent = name;
+        
+        // Color each player with their own color
+        const playerData = currentBoardData?.players?.find(p => p.name === name);
+        if (playerData?.color) {
+            li.style.backgroundColor = playerData.color;
+            li.style.color = getContrastColor(playerData.color);
+        }
+        
+        // Highlight current player with border
         if (name === currentPlayer) {
             li.classList.add('current-turn');
-            // Use player's color for current turn highlight
-            const playerData = currentBoardData?.players?.find(p => p.name === name);
-            if (playerData?.color) {
-                li.style.backgroundColor = playerData.color;
-                li.style.color = getContrastColor(playerData.color);
-            }
+            li.style.border = '3px solid white';
+            li.style.boxShadow = '0 0 10px rgba(255,255,255,0.5)';
         }
+        
         gamePlayersList.appendChild(li);
     });
 
