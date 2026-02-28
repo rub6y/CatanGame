@@ -30,7 +30,6 @@ const placeSettlementBtn = document.getElementById('place-settlement-btn');
 const placeRoadBtn = document.getElementById('place-road-btn');
 const rollDiceBtn = document.getElementById('roll-dice-btn');
 const diceDisplay = document.getElementById('dice-display');
-const resourcePanel = document.getElementById('resource-panel');
 const resourceDisplay = document.getElementById('resource-display');
 
 // Store current board data for click handling
@@ -250,14 +249,20 @@ function renderResourcePanel() {
         wheat: '🌾',
         ore: '🪨'
     };
+    const resourceNames = {
+        wood: 'Wood',
+        brick: 'Brick',
+        sheep: 'Sheep',
+        wheat: 'Wheat',
+        ore: 'Ore'
+    };
     
     let html = '';
     for (const [type, count] of Object.entries(resources)) {
-        html += `<span class="resource res-${type}">${resourceIcons[type]}${count}</span>`;
+        html += `<div class="resource res-${type}"><span>${resourceIcons[type]} ${resourceNames[type]}</span><span>${count}</span></div>`;
     }
     
     resourceDisplay.innerHTML = html;
-    resourcePanel.classList.remove('hidden');
 }
 
 /**

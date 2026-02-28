@@ -130,7 +130,7 @@ button:hover {
     display: flex;
     gap: 1rem;
     margin-top: 1rem;
-    width: 800px;
+    width: 950px;
     height: 500px;
 }
 
@@ -232,15 +232,44 @@ button:hover {
     font-size: 1rem;
 }
 
-.resource-panel {
+.resource-sidebar {
+    width: 160px;
     display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: 0.5rem;
-    padding: 0.5rem;
-    background-color: #1a252f;
+    flex-shrink: 0;
+    background-color: #2c3e50;
+    padding: 1rem;
     border-radius: 5px;
-    margin-left: 1rem;
 }
+
+.resource-sidebar h2 {
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+    color: #ecf0f1;
+}
+
+.resource-sidebar .resource-display {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.resource-sidebar .resource {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 1rem;
+    padding: 0.3rem 0.5rem;
+    background-color: #1a252f;
+    border-radius: 3px;
+}
+
+.resource-sidebar .res-wood { color: #27ae60; }
+.resource-sidebar .res-brick { color: #e74c3c; }
+.resource-sidebar .res-sheep { color: #9b59b6; }
+.resource-sidebar .res-wheat { color: #f1c40f; }
+.resource-sidebar .res-ore { color: #7f8c8d; }
 
 .resource-label {
     font-size: 0.9rem;
