@@ -36,6 +36,13 @@ const rollDiceBtn = document.getElementById('roll-dice-btn');
 const diceDisplay = document.getElementById('dice-display');
 const resourceDisplay = document.getElementById('resource-display');
 const bankDisplay = document.getElementById('bank-display');
+const tradePanel = document.getElementById('trade-panel');
+const proposeTradeBtn = document.getElementById('propose-trade-btn');
+const tradeOffersDiv = document.getElementById('trade-offers');
+const myOffersDiv = document.getElementById('my-offers');
+const tradeModal = document.getElementById('trade-modal');
+const closeTradeModal = document.getElementById('close-trade-modal');
+const submitTradeBtn = document.getElementById('submit-trade-btn');
 
 // Store current board data for click handling
 let currentBoardData = null;
@@ -330,6 +337,224 @@ function renderBank() {
 }
 
 /**
+ * Render trade offers panel
+ */
+function renderTradeOffers() {
+    if (!currentBoardData || !currentBoardData.trades) {
+        tradeOffersDiv.innerHTML = '';
+        myOffersDiv.innerHTML = '';
+        return;
+    }
+    
+    const activeTrades = currentBoardData.trades.active || [];
+    const myOffers = currentBoardData.trades.my_offers || {};
+    
+    const resourceIcons = {
+        wood: '🌲',
+        brick: '🧱',
+        sheep: '🐑',
+        wheat: '🌾',
+        ore: '🪨'
+    };
+    
+    // Render active offers (not from current user)
+    let offersHtml = '<h4>Active Offers:</h4>';
+    const otherOffers = activeTrades.filter(t => t.proposer !== currentUser);
+    
+    if (otherOffers.length === 0) {
+        offersHtml += '<p class="no-offers">No active trade offers</p>';
+    } else {
+        for (const offer of otherOffers) {
+            const accepted = offer.accepted_by || {};
+            const acceptedPlayers = Object.keys(accepted).filter(p => accepted[p] === true);
+            
+            let giveStr = '';
+            for (const [res, count] of Object.entries(offer.offered_resources)) {
+                if (count > 0) giveStr += `${count}${resourceIcons[res]} `;
+            }
+            
+            let wantStr = '';
+            for (const [res, count] of Object.entries(offer.wanted_resources)) {
+                if (count > 0) wantStr += `${count}${resourceIcons[res]} `;
+            }
+            
+            // Get player colors
+            const proposerPlayer = currentBoardData.players?.find(p => p.name === offer.proposer);
+            const proposerColor = proposerPlayer?.color || '#e74c3c';
+            
+            offersHtml += `
+                <div class="trade-offer" data-offer-id="${offer.id}">
+                    <div class="trade-offer-header">
+                        <span class="trade-offer-player" style="color: ${proposerColor}">${offer.proposer}</span>
+                    </div>
+                    <div class="trade-offer-resources">
+                        <span class="give">${giveStr}</span>
+                        <span>→</span>
+                        <span class="want">${wantStr}</span>
+                    </div>
+                    <div class="trade-offer-actions">
+                        <button class="accept-btn" onclick="acceptTrade(${offer.id})">Accept</button>
+                        <button class="decline-btn" onclick="declineTrade(${offer.id})">Decline</button>
+                    </div>
+                </div>
+            `;
+        }
+    }
+    tradeOffersDiv.innerHTML = offersHtml;
+    
+    // Render my offers
+    let myOffersHtml = '<h4>Your Offers:</h4>';
+    const myOfferList = currentBoardData.players?.find(p => p.name === currentUser)?.my_offers || [];
+    
+    if (myOfferList.length === 0) {
+        myOffersHtml += '<p class="no-offers">No active offers</p>';
+    } else {
+        for (const offer of myOfferList) {
+            const accepted = offer.accepted_by || {};
+            const acceptedPlayers = Object.keys(accepted).filter(p => accepted[p] === true);
+            
+            let giveStr = '';
+            for (const [res, count] of Object.entries(offer.offered_resources)) {
+                if (count > 0) giveStr += `${count}${resourceIcons[res]} `;
+            }
+            
+            let wantStr = '';
+            for (const [res, count] of Object.entries(offer.wanted_resources)) {
+                if (count > 0) wantStr += `${count}${resourceIcons[res]} `;
+            }
+            
+            let buttonsHtml = '';
+            if (acceptedPlayers.length > 0) {
+                // Show buttons for each player who accepted
+                buttonsHtml = '<div class="trade-offer-accepted">';
+                for (const player of acceptedPlayers) {
+                    const playerData = currentBoardData.players?.find(p => p.name === player);
+                    const color = playerData?.color || '#e74c3c';
+                    buttonsHtml += `<button class="accepted-player" style="background-color: ${color}" onclick="completeTrade(${offer.id}, '${player}')">${player}</button>`;
+                }
+                buttonsHtml += '</div>';
+            } else {
+                buttonsHtml = '<div class="trade-offer-actions"><button class="decline-btn" onclick="cancelTrade(${offer.id})">Cancel</button></div>';
+            }
+            
+            myOffersHtml += `
+                <div class="trade-offer" data-offer-id="${offer.id}">
+                    <div class="trade-offer-resources">
+                        <span class="give">${giveStr}</span>
+                        <span>→</span>
+                        <span class="want">${wantStr}</span>
+                    </div>
+                    ${acceptedPlayers.length > 0 ? `<span>${acceptedPlayers.length} accepted</span>` : ''}
+                    ${buttonsHtml}
+                </div>
+            `;
+        }
+    }
+    myOffersDiv.innerHTML = myOffersHtml;
+}
+
+/**
+ * Show trade modal
+ */
+function showTradeModal() {
+    if (!currentUser || currentUser !== currentPlayer) {
+        alert('You can only propose trades on your turn');
+        return;
+    }
+    tradeModal.classList.add('show');
+}
+
+/**
+ * Hide trade modal
+ */
+function hideTradeModal() {
+    tradeModal.classList.remove('hidden');
+    tradeModal.classList.remove('show');
+    // Reset inputs
+    ['wood', 'brick', 'sheep', 'wheat', 'ore'].forEach(res => {
+        document.getElementById(`give-${res}`).value = 0;
+        document.getElementById(`want-${res}`).value = 0;
+    });
+}
+
+/**
+ * Submit trade proposal
+ */
+function submitTrade() {
+    const offered = {};
+    const wanted = {};
+    
+    ['wood', 'brick', 'sheep', 'wheat', 'ore'].forEach(res => {
+        const giveCount = parseInt(document.getElementById(`give-${res}`).value) || 0;
+        const wantCount = parseInt(document.getElementById(`want-${res}`).value) || 0;
+        if (giveCount > 0) offered[res] = giveCount;
+        if (wantCount > 0) wanted[res] = wantCount;
+    });
+    
+    if (Object.keys(offered).length === 0 || Object.keys(wanted).length === 0) {
+        alert('Please specify resources to give and want');
+        return;
+    }
+    
+    socket.emit('propose_trade', {
+        name: currentUser,
+        offered: offered,
+        wanted: wanted
+    });
+    
+    hideTradeModal();
+}
+
+/**
+ * Accept a trade offer
+ */
+function acceptTrade(offerId) {
+    socket.emit('accept_trade', {
+        name: currentUser,
+        offer_id: offerId
+    });
+}
+
+/**
+ * Decline a trade offer
+ */
+function declineTrade(offerId) {
+    socket.emit('decline_trade', {
+        name: currentUser,
+        offer_id: offerId
+    });
+}
+
+/**
+ * Cancel your trade offer
+ */
+function cancelTrade(offerId) {
+    socket.emit('cancel_trade', {
+        name: currentUser,
+        offer_id: offerId
+    });
+}
+
+/**
+ * Complete trade with selected player
+ */
+function completeTrade(offerId, responder) {
+    socket.emit('complete_trade', {
+        name: currentUser,
+        offer_id: offerId,
+        selected_responder: responder
+    });
+}
+
+// Trade modal event listeners
+if (proposeTradeBtn) proposeTradeBtn.addEventListener('click', showTradeModal);
+if (closeTradeModal) closeTradeModal.addEventListener('click', hideTradeModal);
+if (submitTradeBtn) submitTradeBtn.addEventListener('click', submitTrade);
+if (tradeModal) tradeModal.addEventListener('click', (e) => {
+    if (e.target === tradeModal) hideTradeModal();
+});
+
+/**
  * Update console visibility and button states based on current turn
  */
 function updateConsoleVisibility() {
@@ -532,6 +757,7 @@ socket.on('board_updated', (data) => {
     }
     renderResourcePanel();
     renderBank();
+    renderTradeOffers();
     
     // Clear highlight after 2 seconds if there was one
     if (data.highlight) {
@@ -539,6 +765,31 @@ socket.on('board_updated', (data) => {
             window.BoardRenderer.render(currentBoardData, 'board-canvas', null);
         }, 2000);
     }
+});
+
+socket.on('trade_proposed', (data) => {
+    console.log('Trade proposed:', data.offer);
+    renderTradeOffers();
+});
+
+socket.on('trade_accepted', (data) => {
+    console.log('Trade accepted:', data);
+    renderTradeOffers();
+});
+
+socket.on('trade_declined', (data) => {
+    console.log('Trade declined:', data);
+    renderTradeOffers();
+});
+
+socket.on('trade_cancelled', (data) => {
+    console.log('Trade cancelled:', data);
+    renderTradeOffers();
+});
+
+socket.on('trade_completed', (data) => {
+    console.log('Trade completed:', data);
+    renderTradeOffers();
 });
 
 socket.on('error', (data) => {

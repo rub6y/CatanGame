@@ -548,6 +548,11 @@ class Game:
         # Clean up expired trades
         self.trade_manager.cleanup_expired()
         
+        # Build my_offers for each player
+        my_offers = {}
+        for player in self.players:
+            my_offers[player.name] = self.trade_manager.get_my_offers(player.name)
+        
         return {
             'hexes': hexes,
             'vertices': vertices,
@@ -556,7 +561,7 @@ class Game:
             'bank': self.bank.get_all(),
             'trades': {
                 'active': self.trade_manager.get_all_active(),
-                'my_offers': {}
+                'my_offers': my_offers
             }
         }
     
