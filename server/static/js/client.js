@@ -468,8 +468,8 @@ function showTradeModal() {
  * Hide trade modal
  */
 function hideTradeModal() {
-    tradeModal.classList.remove('hidden');
     tradeModal.classList.remove('show');
+    tradeModal.classList.add('hidden');
     // Reset inputs
     ['wood', 'brick', 'sheep', 'wheat', 'ore'].forEach(res => {
         document.getElementById(`give-${res}`).value = 0;
@@ -560,6 +560,13 @@ if (tradeModal) tradeModal.addEventListener('click', (e) => {
 function updateConsoleVisibility() {
     // Update button colors based on current player
     updateButtonColors();
+    
+    // Show/hide trade button based on turn
+    if (currentRole !== 'observer' && currentUser === currentPlayer) {
+        proposeTradeBtn.style.display = 'inline-block';
+    } else {
+        proposeTradeBtn.style.display = 'none';
+    }
     
     if (currentRole === 'observer') {
         gameConsole.classList.add('hidden');
