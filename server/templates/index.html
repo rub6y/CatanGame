@@ -70,13 +70,50 @@
                 </div>
             </div>
             <div class="resource-sidebar">
+                <div id="trade-panel">
+                    <h2>Trade</h2>
+                    <button id="propose-trade-btn">Propose Trade</button>
+                    <div id="trade-offers" class="trade-offers"></div>
+                    <div id="my-offers" class="my-offers"></div>
+                </div>
                 <div id="bank-panel">
                     <h2>Bank</h2>
                     <div id="bank-display" class="bank-display"></div>
                 </div>
-                <h2>Your Resources</h2>
-                <div id="resource-display" class="resource-display"></div>
+                <div id="player-resources-panel">
+                    <h2>Your Resources</h2>
+                    <div id="resource-display" class="resource-display"></div>
+                </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Trade Modal -->
+    <div id="trade-modal" class="modal hidden">
+        <div class="modal-content">
+            <span id="close-trade-modal" class="close">&times;</span>
+            <h2>Propose Trade</h2>
+            <div class="trade-modal-section">
+                <h3>You Give:</h3>
+                <div class="resource-selector">
+                    <label>🌲 Wood: <input type="number" id="give-wood" min="0" max="10" value="0"></label>
+                    <label>🧱 Brick: <input type="number" id="give-brick" min="0" max="10" value="0"></label>
+                    <label>🐑 Sheep: <input type="number" id="give-sheep" min="0" max="10" value="0"></label>
+                    <label>🌾 Wheat: <input type="number" id="give-wheat" min="0" max="10" value="0"></label>
+                    <label>🪨 Ore: <input type="number" id="give-ore" min="0" max="10" value="0"></label>
+                </div>
+            </div>
+            <div class="trade-modal-section">
+                <h3>You Want:</h3>
+                <div class="resource-selector">
+                    <label>🌲 Wood: <input type="number" id="want-wood" min="0" max="10" value="0"></label>
+                    <label>🧱 Brick: <input type="number" id="want-brick" min="0" max="10" value="0"></label>
+                    <label>🐑 Sheep: <input type="number" id="want-sheep" min="0" max="10" value="0"></label>
+                    <label>🌾 Wheat: <input type="number" id="want-wheat" min="0" max="10" value="0"></label>
+                    <label>🪨 Ore: <input type="number" id="want-ore" min="0" max="10" value="0"></label>
+                </div>
+            </div>
+            <button id="submit-trade-btn">Propose</button>
         </div>
     </div>
 
