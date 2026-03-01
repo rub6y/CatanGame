@@ -335,7 +335,10 @@ def handle_propose_trade(data):
     offered = data.get('offered', {})
     wanted = data.get('wanted', {})
     
-    if not name or not offered or not wanted:
+    print(f"Received trade proposal from {name}: offered={offered}, wanted={wanted}")
+    
+    if not name or len(offered) == 0 or len(wanted) == 0:
+        print("Trade rejected: empty name or resources")
         return
     
     # Check if it's this player's turn
@@ -346,15 +349,26 @@ def handle_propose_trade(data):
     
     # Check player has the offered resources
     player = current_game.get_player(name)
+    if not player:
+        print("Trade rejected: player not found")
+        return
+    
+    print(f"Player {name} resources: {player.resources}")
+    
     for resource, count in offered.items():
-        if player.resources.get(resource, 0) < count:
-            emit('error', {'message': f'Not enough {resource} to offer'})
+        available = player.resources.get(resource, 0)
+        if available < count:
+            emit('error', {'message': f'Not enough {resource}: have {available}, offering {count}'})
             return
     
     offer = current_game.propose_trade(name, offered, wanted)
     if offer:
-        print(f"Player {name} proposed trade: {offered} -> {wanted}")
+        print(f"Trade proposed successfully! Offer ID: {offer['id']}")
         emit('trade_proposed', {'offer': offer}, broadcast=True)
+        # Also emit board_updated to refresh everyone's trade lists
+        emit('board_updated', {
+            'board': current_game.get_board_data()
+        }, broadcast=True)
     else:
         emit('error', {'message': 'Maximum number of trade offers reached'})
 
