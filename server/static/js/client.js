@@ -461,6 +461,7 @@ function showTradeModal() {
         alert('You can only propose trades on your turn');
         return;
     }
+    tradeModal.classList.remove('hidden');
     tradeModal.classList.add('show');
 }
 
