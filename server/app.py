@@ -326,6 +326,134 @@ def handle_place_road(data):
     }, broadcast=True)
 
 
+@socketio.on('propose_trade')
+def handle_propose_trade(data):
+    if current_game is None or current_game.game_state != "started":
+        return
+    
+    name = data.get('name', '')
+    offered = data.get('offered', {})
+    wanted = data.get('wanted', {})
+    
+    if not name or not offered or not wanted:
+        return
+    
+    # Check if it's this player's turn
+    current_player = current_game.players[current_game.current_player_index]
+    if current_player.name != name:
+        emit('error', {'message': f'Only {current_player.name} can propose trades on their turn'})
+        return
+    
+    # Check player has the offered resources
+    player = current_game.get_player(name)
+    for resource, count in offered.items():
+        if player.resources.get(resource, 0) < count:
+            emit('error', {'message': f'Not enough {resource} to offer'})
+            return
+    
+    offer = current_game.propose_trade(name, offered, wanted)
+    if offer:
+        print(f"Player {name} proposed trade: {offered} -> {wanted}")
+        emit('trade_proposed', {'offer': offer}, broadcast=True)
+    else:
+        emit('error', {'message': 'Maximum number of trade offers reached'})
+
+
+@socketio.on('accept_trade')
+def handle_accept_trade(data):
+    if current_game is None or current_game.game_state != "started":
+        return
+    
+    name = data.get('name', '')
+    offer_id = data.get('offer_id', 0)
+    
+    if not name or not offer_id:
+        return
+    
+    # Check player has the wanted resources
+    player = current_game.get_player(name)
+    offer = current_game.trade_manager.offers.get(offer_id)
+    if not offer:
+        emit('error', {'message': 'Trade offer not found'})
+        return
+    
+    # Check if player has resources
+    for resource, count in offer['wanted_resources'].items():
+        if player.resources.get(resource, 0) < count:
+            emit('error', {'message': f'Not enough {resource} to accept this trade'})
+            return
+    
+    if current_game.accept_trade(offer_id, name):
+        print(f"Player {name} accepted trade #{offer_id}")
+        emit('trade_accepted', {'offer_id': offer_id, 'player': name}, broadcast=True)
+    else:
+        emit('error', {'message': 'Could not accept trade'})
+
+
+@socketio.on('decline_trade')
+def handle_decline_trade(data):
+    if current_game is None or current_game.game_state != "started":
+        return
+    
+    name = data.get('name', '')
+    offer_id = data.get('offer_id', 0)
+    
+    if not name or not offer_id:
+        return
+    
+    if current_game.decline_trade(offer_id, name):
+        print(f"Player {name} declined trade #{offer_id}")
+        emit('trade_declined', {'offer_id': offer_id, 'player': name}, broadcast=True)
+
+
+@socketio.on('cancel_trade')
+def handle_cancel_trade(data):
+    if current_game is None or current_game.game_state != "started":
+        return
+    
+    name = data.get('name', '')
+    offer_id = data.get('offer_id', 0)
+    
+    if not name or not offer_id:
+        return
+    
+    if current_game.cancel_trade(offer_id, name):
+        print(f"Player {name} cancelled trade #{offer_id}")
+        emit('trade_cancelled', {'offer_id': offer_id}, broadcast=True)
+
+
+@socketio.on('complete_trade')
+def handle_complete_trade(data):
+    if current_game is None or current_game.game_state != "started":
+        return
+    
+    name = data.get('name', '')
+    offer_id = data.get('offer_id', 0)
+    selected_responder = data.get('selected_responder', None)
+    
+    if not name or not offer_id:
+        return
+    
+    result = current_game.complete_trade(offer_id, name, selected_responder)
+    if not result:
+        emit('error', {'message': 'Could not complete trade'})
+        return
+    
+    # Execute the trade
+    if result['type'] == 'bank':
+        current_game.execute_bank_trade(offer_id, name)
+        print(f"Player {name} completed bank trade #{offer_id}")
+        emit('trade_completed', {'offer_id': offer_id, 'type': 'bank'}, broadcast=True)
+    else:
+        current_game.execute_trade_with_player(offer_id, name, result['responder'])
+        print(f"Player {name} completed trade #{offer_id} with {result['responder']}")
+        emit('trade_completed', {'offer_id': offer_id, 'type': 'player', 'with': result['responder']}, broadcast=True)
+    
+    emit('board_updated', {
+        'board': current_game.get_board_data()
+    }, broadcast=True)
+
+
 def emit_user_list():
     users = load_users()
     players = [u for u in users if u.get('role') == 'player']

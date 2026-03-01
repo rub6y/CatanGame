@@ -3,6 +3,7 @@ import random
 from game.hex_models import Hex, Vertex, Edge
 from game.player import Player
 from game.bank import Bank
+from game.trade import TradeManager
 
 
 class Game:
@@ -97,6 +98,9 @@ class Game:
         
         # Generate the complete board
         self._generate_board()
+        
+        # Trade manager
+        self.trade_manager = TradeManager()
     
     def add_observer(self, name: str):
         """Add an observer to the game."""
@@ -130,6 +134,76 @@ class Game:
     def get_player_names(self) -> list:
         """Get list of player names (for compatibility)."""
         return [p.name for p in self.players]
+    
+    def propose_trade(self, proposer: str, offered_resources: dict, wanted_resources: dict):
+        """Propose a new trade offer."""
+        return self.trade_manager.propose(proposer, offered_resources, wanted_resources)
+    
+    def accept_trade(self, offer_id: int, player_name: str) -> bool:
+        """Accept a trade offer. Returns True if successful."""
+        player = self.get_player(player_name)
+        if not player:
+            return False
+        return self.trade_manager.accept(offer_id, player_name, player.resources)
+    
+    def decline_trade(self, offer_id: int, player_name: str) -> bool:
+        """Decline a trade offer."""
+        return self.trade_manager.decline(offer_id, player_name)
+    
+    def cancel_trade(self, offer_id: int, player_name: str) -> bool:
+        """Cancel a trade offer (proposer only)."""
+        return self.trade_manager.cancel(offer_id, player_name)
+    
+    def complete_trade(self, offer_id: int, proposer: str, selected_responder: str = None) -> dict | None:
+        """Complete a trade. If 4:1 or better, auto-trade with bank."""
+        return self.trade_manager.complete(offer_id, proposer, selected_responder)
+    
+    def execute_trade_with_player(self, offer_id: int, proposer: str, responder: str):
+        """Execute a player-to-player trade."""
+        offer = self.trade_manager.offers.get(offer_id)
+        if not offer or offer['status'] != 'completed':
+            return False
+        
+        proposer_player = self.get_player(proposer)
+        responder_player = self.get_player(responder)
+        
+        if not proposer_player or not responder_player:
+            return False
+        
+        # Transfer offered resources from responder to proposer
+        for resource, count in offer['offered_resources'].items():
+            responder_player.resources[resource] = responder_player.resources.get(resource, 0) - count
+            proposer_player.resources[resource] = proposer_player.resources.get(resource, 0) + count
+        
+        # Transfer wanted resources from proposer to responder
+        for resource, count in offer['wanted_resources'].items():
+            proposer_player.resources[resource] = proposer_player.resources.get(resource, 0) - count
+            responder_player.resources[resource] = responder_player.resources.get(resource, 0) + count
+        
+        return True
+    
+    def execute_bank_trade(self, offer_id: int, proposer: str):
+        """Execute a bank trade (4:1 or better ratio)."""
+        offer = self.trade_manager.offers.get(offer_id)
+        if not offer or offer['status'] != 'completed':
+            return False
+        
+        proposer_player = self.get_player(proposer)
+        if not proposer_player:
+            return False
+        
+        # Transfer offered resources to bank
+        for resource, count in offer['offered_resources'].items():
+            for _ in range(count):
+                self.bank.return_resources(resource)
+        
+        # Transfer wanted resources from bank to player
+        for resource, count in offer['wanted_resources'].items():
+            for _ in range(count):
+                self.bank.take(resource)
+            proposer_player.resources[resource] = proposer_player.resources.get(resource, 0) + count
+        
+        return True
     
     def _hex_key(self, x: int, y: int, z: int) -> str:
         """
@@ -471,12 +545,19 @@ class Game:
                 'neighbors': edge_obj.neighbors
             }
         
+        # Clean up expired trades
+        self.trade_manager.cleanup_expired()
+        
         return {
             'hexes': hexes,
             'vertices': vertices,
             'edges': edges,
             'players': [p.to_dict() for p in self.players],
-            'bank': self.bank.get_all()
+            'bank': self.bank.get_all(),
+            'trades': {
+                'active': self.trade_manager.get_all_active(),
+                'my_offers': {}
+            }
         }
     
     def distribute_resources(self, dice_total: int):
