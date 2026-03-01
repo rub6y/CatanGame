@@ -368,13 +368,14 @@ function renderTradeOffers() {
             const accepted = offer.accepted_by || {};
             const acceptedPlayers = Object.keys(accepted).filter(p => accepted[p] === true);
             
+            // For responder: give = what proposer wants, get = what proposer offers
             let giveStr = '';
-            for (const [res, count] of Object.entries(offer.offered_resources)) {
+            for (const [res, count] of Object.entries(offer.wanted_resources)) {
                 if (count > 0) giveStr += `${count}${resourceIcons[res]} `;
             }
             
             let wantStr = '';
-            for (const [res, count] of Object.entries(offer.wanted_resources)) {
+            for (const [res, count] of Object.entries(offer.offered_resources)) {
                 if (count > 0) wantStr += `${count}${resourceIcons[res]} `;
             }
             
@@ -388,9 +389,9 @@ function renderTradeOffers() {
                         <span class="trade-offer-player" style="color: ${proposerColor}">${offer.proposer}</span>
                     </div>
                     <div class="trade-offer-resources">
-                        <span class="give">${giveStr}</span>
+                        <span class="give">You give: ${giveStr}</span>
                         <span>→</span>
-                        <span class="want">${wantStr}</span>
+                        <span class="want">You get: ${wantStr}</span>
                     </div>
                     <div class="trade-offer-actions">
                         <button class="accept-btn" onclick="acceptTrade(${offer.id})">Accept</button>

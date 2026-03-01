@@ -400,6 +400,10 @@ def handle_accept_trade(data):
     if current_game.accept_trade(offer_id, name):
         print(f"Player {name} accepted trade #{offer_id}")
         emit('trade_accepted', {'offer_id': offer_id, 'player': name}, broadcast=True)
+        # Emit board_updated to refresh everyone's trade lists
+        emit('board_updated', {
+            'board': current_game.get_board_data()
+        }, broadcast=True)
     else:
         emit('error', {'message': 'Could not accept trade'})
 
