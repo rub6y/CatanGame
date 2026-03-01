@@ -438,6 +438,19 @@ def handle_cancel_trade(data):
     if current_game.cancel_trade(offer_id, name):
         print(f"Player {name} cancelled trade #{offer_id}")
         emit('trade_cancelled', {'offer_id': offer_id}, broadcast=True)
+        emit('board_updated', {
+            'board': current_game.get_board_data()
+        }, broadcast=True)
+
+
+@socketio.on('refresh_board')
+def handle_refresh_board():
+    """Refresh board data (used for timer updates)."""
+    if current_game is None or current_game.game_state != "started":
+        return
+    emit('board_updated', {
+        'board': current_game.get_board_data()
+    }, broadcast=True)
 
 
 @socketio.on('complete_trade')

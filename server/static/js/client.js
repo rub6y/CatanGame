@@ -384,9 +384,10 @@ function renderTradeOffers() {
             const proposerColor = proposerPlayer?.color || '#e74c3c';
             
             offersHtml += `
-                <div class="trade-offer" data-offer-id="${offer.id}">
+                <div class="trade-offer" data-offer-id="${offer.id}" data-created="${offer.created_at}">
                     <div class="trade-offer-header">
                         <span class="trade-offer-player" style="color: ${proposerColor}">${offer.proposer}</span>
+                        <span class="trade-timer" data-offer-id="${offer.id}"></span>
                     </div>
                     <div class="trade-offer-resources">
                         <span class="give">You give: ${giveStr}</span>
@@ -405,7 +406,7 @@ function renderTradeOffers() {
     
     // Render my offers
     let myOffersHtml = '<h4>Your Offers:</h4>';
-    const myOfferList = currentBoardData.players?.find(p => p.name === currentUser)?.my_offers || [];
+    const myOfferList = currentBoardData.trades?.my_offers?.[currentUser] || [];
     
     if (myOfferList.length === 0) {
         myOffersHtml += '<p class="no-offers">No active offers</p>';
@@ -439,7 +440,10 @@ function renderTradeOffers() {
             }
             
             myOffersHtml += `
-                <div class="trade-offer" data-offer-id="${offer.id}">
+                <div class="trade-offer" data-offer-id="${offer.id}" data-created="${offer.created_at}">
+                    <div class="trade-offer-header">
+                        <span class="trade-timer" data-offer-id="${offer.id}"></span>
+                    </div>
                     <div class="trade-offer-resources">
                         <span class="give">${giveStr}</span>
                         <span>→</span>
@@ -453,6 +457,41 @@ function renderTradeOffers() {
     }
     myOffersDiv.innerHTML = myOffersHtml;
 }
+
+/**
+ * Update trade offer timers
+ */
+function updateTradeTimers() {
+    const timers = document.querySelectorAll('.trade-timer');
+    const currentTime = Date.now() / 1000;
+    let needsRefresh = false;
+    
+    timers.forEach(timer => {
+        const offerId = timer.dataset.offerId;
+        const offerEl = timer.closest('.trade-offer');
+        if (!offerEl) return;
+        
+        const createdAt = parseFloat(offerEl.dataset.created);
+        if (isNaN(createdAt)) return;
+        
+        const elapsed = currentTime - createdAt;
+        const remaining = Math.max(0, 10 - Math.floor(elapsed));
+        
+        timer.textContent = `${remaining}s`;
+        
+        if (remaining === 0) {
+            needsRefresh = true;
+        }
+    });
+    
+    // Refresh board if any offer expired
+    if (needsRefresh && currentBoardData) {
+        socket.emit('refresh_board');
+    }
+}
+
+// Update timers every second
+setInterval(updateTradeTimers, 1000);
 
 /**
  * Show trade modal
