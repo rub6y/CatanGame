@@ -394,8 +394,20 @@ function renderTradeOffers() {
                         <span class="want">You get: ${wantStr}</span>
                     </div>
                     <div class="trade-offer-actions">
-                        <button class="accept-btn" onclick="acceptTrade(${offer.id})">Accept</button>
-                        <button class="decline-btn" onclick="declineTrade(${offer.id})">Decline</button>
+                        <div class="accept-players-row">
+`;
+            
+            // Show all players as accept options
+            const allPlayers = currentBoardData.players || [];
+            for (const player of allPlayers) {
+                if (player.name === offer.proposer) continue; // Skip proposer
+                const hasAccepted = accepted[player.name] === true;
+                const btnColor = hasAccepted ? (player.color || '#7f8c8d') : '#7f8c8d';
+                buttonsHtml += `<button class="accepted-player" style="background-color: ${btnColor}" onclick="acceptTrade(${offer.id})">${player.name}</button>`;
+            }
+            
+            buttonsHtml += `
+                        </div>
                     </div>
                 </div>
             `;

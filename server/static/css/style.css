@@ -156,7 +156,7 @@ button:hover {
     display: flex;
     gap: 1rem;
     margin-top: 1rem;
-    width: 1110px;
+    width: 1140px;
     height: 550px;
 }
 
@@ -259,7 +259,7 @@ button:hover {
 }
 
 .resource-sidebar {
-    width: 220px;
+    width: 250px;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
@@ -267,6 +267,49 @@ button:hover {
     background-color: #2c3e50;
     padding: 1rem;
     border-radius: 5px;
+}
+
+/* Trade panel - 75% of sidebar */
+#trade-panel {
+    flex: 3;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Info section - 25% of sidebar (resources + bank) */
+#info-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    border-top: 1px solid #34495e;
+    padding-top: 0.5rem;
+}
+
+#player-resources-panel h2,
+#bank-panel h2 {
+    font-size: 0.75rem;
+    margin-bottom: 0.2rem;
+}
+
+#player-resources-panel .resource-display {
+    gap: 0.2rem;
+}
+
+#player-resources-panel .resource {
+    font-size: 0.7rem;
+    padding: 0.15rem 0.3rem;
+}
+
+#bank-panel .bank-display {
+    gap: 0.2rem;
+    font-size: 0.7rem;
+}
+
+#bank-panel .bank-resource {
+    font-size: 0.65rem;
+    padding: 0.1rem 0.2rem;
 }
 
 .resource-sidebar h2 {
@@ -431,15 +474,37 @@ button:hover {
     margin-top: 0.3rem;
 }
 
+.trade-offer-actions {
+    display: flex;
+    gap: 0.2rem;
+    flex-wrap: wrap;
+    margin-top: 0.2rem;
+    align-items: center;
+}
+
+.accept-players-row {
+    display: flex;
+    gap: 0.2rem;
+    flex-wrap: wrap;
+}
+
+.trade-offer-actions button {
+    padding: 0.15rem 0.3rem;
+    font-size: 0.6rem;
+}
+
 .accepted-player {
-    padding: 0.2rem 0.4rem;
+    padding: 0.15rem 0.3rem;
     border-radius: 3px;
-    font-size: 0.7rem;
+    font-size: 0.55rem;
     cursor: pointer;
+    background-color: #7f8c8d;
+    color: white;
+    border: none;
 }
 
 .accepted-player.selected {
-    border: 2px solid white;
+    border: 1px solid white;
 }
 
 /* Trade Modal */
