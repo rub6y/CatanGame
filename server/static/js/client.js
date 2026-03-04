@@ -407,7 +407,9 @@ function renderTradeOffers() {
                 buttonsHtml += `<button class="accepted-player" style="background-color: ${btnColor}" onclick="acceptTrade(${offer.id})">${player.name}</button>`;
             }
             
-            buttonsHtml += `
+            offersHtml += buttonsHtml;
+            
+            buttonsHtml = `
                         </div>
                     </div>
                 </div>
