@@ -400,10 +400,21 @@ def handle_accept_trade(data):
     if current_game.accept_trade(offer_id, name):
         print(f"Player {name} accepted trade #{offer_id}")
         emit('trade_accepted', {'offer_id': offer_id, 'player': name}, broadcast=True)
-        # Emit board_updated to refresh everyone's trade lists
-        emit('board_updated', {
-            'board': current_game.get_board_data()
-        }, broadcast=True)
+        
+        # Check if this is a bank trade (4:1 or better) - auto-complete with bank
+        offer = current_game.trade_manager.offers.get(offer_id)
+        if offer and current_game.trade_manager._is_bank_trade_offer(offer):
+            print(f"Auto-completing bank trade #{offer_id}")
+            result = current_game.complete_trade(offer_id, offer['proposer'], None)
+            if result and result['type'] == 'bank':
+                current_game.execute_bank_trade(offer_id, offer['proposer'])
+                print(f"Bank trade completed for {offer['proposer']}")
+                emit('trade_completed', {'offer_id': offer_id, 'type': 'bank'}, broadcast=True)
+        else:
+            # Not a bank trade - emit board_updated for normal flow
+            emit('board_updated', {
+                'board': current_game.get_board_data()
+            }, broadcast=True)
     else:
         emit('error', {'message': 'Could not accept trade'})
 
