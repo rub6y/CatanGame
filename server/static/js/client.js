@@ -277,7 +277,6 @@ function renderResourcePanel() {
         return;
     }
     
-    const resources = player.resources || {};
     const resourceIcons = {
         wood: '🌲',
         brick: '🧱',
@@ -293,8 +292,11 @@ function renderResourcePanel() {
         ore: 'Ore'
     };
     
+    const allResourceTypes = ['wood', 'brick', 'sheep', 'wheat', 'ore'];
+    
     let html = '';
-    for (const [type, count] of Object.entries(resources)) {
+    for (const type of allResourceTypes) {
+        const count = resources[type] || 0;
         html += `<div class="resource res-${type}">${resourceIcons[type]}${count}</div>`;
     }
     
