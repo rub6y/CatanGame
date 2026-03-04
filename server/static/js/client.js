@@ -397,9 +397,9 @@ function renderTradeOffers() {
                         <span>→</span>
                         <span class="want">You get: ${wantStr}</span>
                     </div>
-                    <div class="trade-offer-actions" style="display: flex; gap: 10px; justify-content: center;">
-                        <button class="accept-btn" style="background-color: ${acceptBtnColor}" onclick="acceptTrade(${offer.id})">${acceptBtnText}</button>
-                        <button class="decline-btn" onclick="declineTrade(${offer.id})">Deny</button>
+                    <div class="trade-offer-actions" style="display: flex; flex-wrap: nowrap; gap: 5px; justify-content: center;">
+                        <button class="accept-btn" style="background-color: ${acceptBtnColor}; font-size: 11px; padding: 4px 8px;" onclick="acceptTrade(${offer.id})">${acceptBtnText}</button>
+                        <button class="decline-btn" style="font-size: 11px; padding: 4px 8px;" onclick="declineTrade(${offer.id})">Deny</button>
                     </div>
                 </div>
             `;
@@ -427,14 +427,14 @@ function renderTradeOffers() {
             }
             
             // Show 3 buttons for each player - grey if not accepted, colored if accepted
-            let buttonsHtml = '<div class="trade-offer-actions" style="display: flex; gap: 10px; justify-content: center;">';
+            let buttonsHtml = '<div class="trade-offer-actions" style="display: flex; flex-wrap: nowrap; gap: 5px; justify-content: center;">';
             const allPlayers = currentBoardData.players || [];
             for (const player of allPlayers) {
                 if (player.name === currentUser) continue;
                 const hasAccepted = accepted[player.name] === true;
                 const btnColor = hasAccepted ? (player.color || '#27ae60') : '#7f8c8d';
                 const btnText = hasAccepted ? player.name : player.name;
-                buttonsHtml += `<button class="accepted-player" style="background-color: ${btnColor}" onclick="completeTrade(${offer.id}, '${player.name}')">${btnText}</button>`;
+                buttonsHtml += `<button class="accepted-player" style="background-color: ${btnColor}; font-size: 11px; padding: 4px 8px;" onclick="completeTrade(${offer.id}, '${player.name}')">${btnText}</button>`;
             }
             buttonsHtml += '</div>';
             
