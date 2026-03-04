@@ -24,6 +24,10 @@ FLASK_DEBUG=1 python server/app.py
 pytest server/tests/test_file.py::test_function_name -v
 pytest server/tests/ -k "test_name_pattern" -v
 
+# Run tests with coverage
+pytest server/tests/ --cov=server --cov-report=html
+pytest server/tests/ --cov=server --cov-report=term
+
 # Run all tests
 pytest server/tests/
 
@@ -106,6 +110,26 @@ def create_app(config: dict) -> Flask:
 
 **Error Handling**: Handle async errors with try/catch, display user-friendly messages.
 
+**Example**:
+```javascript
+const socket = io();
+let currentUser = null;
+const MAX_PLAYERS = 4;
+
+function handleJoin(data) {
+    try {
+        const name = data.name.trim();
+        if (!name) {
+            throw new Error('Name cannot be empty');
+        }
+        // Game logic here
+    } catch (error) {
+        console.error('Join error:', error.message);
+        displayError(error.message);
+    }
+}
+```
+
 ---
 
 ## Project Structure
@@ -119,7 +143,6 @@ CatanPro/
 │   ├── templates/          # HTML templates
 │   ├── data/               # Game data (JSON)
 │   ├── game/               # Game logic modules
-│   ├── sockets/            # Socket handlers
 │   └── tests/              # Python tests (pytest)
 ├── build.md                # Project specification
 └── AGENTS.md               # This file
@@ -133,6 +156,7 @@ CatanPro/
 - Follow naming: `test_<module>_<function>.py`
 - Use fixtures for common test setup
 - Mock external dependencies
+- Run tests with coverage: `pytest server/tests/ --cov=server --cov-report=term`
 
 ---
 
@@ -144,6 +168,7 @@ Document custom events when implementing:
 - `next_turn` - Advance turn
 - `place_settlement` / `place_road` - Place game pieces
 - `set_color` - Set player color
+- `roll_dice` - Roll dice
 - `error` - Error response
 
 ---
@@ -152,6 +177,8 @@ Document custom events when implementing:
 1. Create feature branch: `git checkout -b feature/feature-name`
 2. Make changes and commit with descriptive messages
 3. Use conventional commits: `feat:`, `fix:`, `refactor:`, `test:`
+4. Run linting and tests before committing
+5. Push to remote and create pull request
 
 ---
 
@@ -160,3 +187,4 @@ Document custom events when implementing:
 - Ensure all tests pass before submitting PRs
 - Frontend: vanilla JS in `server/static/js/`
 - Backend: Flask + SocketIO in `server/`
+- Use `eventlet` for production deployment
