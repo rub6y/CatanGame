@@ -357,7 +357,7 @@ function renderTradeOffers() {
         ore: '🪨'
     };
     
-    // Render active offers (not from current user) - only if there are offers
+    // Render active offers (other players' offers - responder view)
     let offersHtml = '';
     const otherOffers = activeTrades.filter(t => t.proposer !== currentUser);
     
@@ -365,7 +365,7 @@ function renderTradeOffers() {
         offersHtml = '<h4>Active Offers:</h4>';
         for (const offer of otherOffers) {
             const accepted = offer.accepted_by || {};
-            const acceptedPlayers = Object.keys(accepted).filter(p => accepted[p] === true);
+            const hasAcceptedMe = accepted[currentUser] === true;
             
             // For responder: give = what proposer wants, get = what proposer offers
             let giveStr = '';
@@ -382,6 +382,10 @@ function renderTradeOffers() {
             const proposerPlayer = currentBoardData.players?.find(p => p.name === offer.proposer);
             const proposerColor = proposerPlayer?.color || '#e74c3c';
             
+            // Show Accept and Deny buttons for responders
+            const acceptBtnColor = hasAcceptedMe ? '#27ae60' : '#95a5a6';
+            const acceptBtnText = hasAcceptedMe ? 'Accepted' : 'Accept';
+            
             offersHtml += `
                 <div class="trade-offer" data-offer-id="${offer.id}" data-created="${offer.created_at}">
                     <div class="trade-offer-header">
@@ -393,24 +397,9 @@ function renderTradeOffers() {
                         <span>→</span>
                         <span class="want">You get: ${wantStr}</span>
                     </div>
-                    <div class="trade-offer-actions">
-                        <div class="accept-players-row">
-`;
-            
-            // Show all players as accept options
-            let buttonsHtml = '';
-            const allPlayers = currentBoardData.players || [];
-            for (const player of allPlayers) {
-                if (player.name === offer.proposer) continue; // Skip proposer
-                const hasAccepted = accepted[player.name] === true;
-                const btnColor = hasAccepted ? (player.color || '#7f8c8d') : '#7f8c8d';
-                buttonsHtml += `<button class="accepted-player" style="background-color: ${btnColor}" onclick="acceptTrade(${offer.id})">${player.name}</button>`;
-            }
-            
-            offersHtml += buttonsHtml;
-            
-            buttonsHtml = `
-                        </div>
+                    <div class="trade-offer-actions" style="display: flex; gap: 10px; justify-content: center;">
+                        <button class="accept-btn" style="background-color: ${acceptBtnColor}" onclick="acceptTrade(${offer.id})">${acceptBtnText}</button>
+                        <button class="decline-btn" onclick="declineTrade(${offer.id})">Deny</button>
                     </div>
                 </div>
             `;
@@ -418,7 +407,7 @@ function renderTradeOffers() {
     }
     tradeOffersDiv.innerHTML = offersHtml;
     
-    // Render my offers - only if there are offers
+    // Render my offers (own offers - proposer view)
     let myOffersHtml = '';
     const myOfferList = currentBoardData.trades?.my_offers?.[currentUser] || [];
     
@@ -426,7 +415,6 @@ function renderTradeOffers() {
         myOffersHtml = '<h4>Your Offers:</h4>';
         for (const offer of myOfferList) {
             const accepted = offer.accepted_by || {};
-            const acceptedPlayers = Object.keys(accepted).filter(p => accepted[p] === true);
             
             let giveStr = '';
             for (const [res, count] of Object.entries(offer.offered_resources)) {
@@ -438,19 +426,17 @@ function renderTradeOffers() {
                 if (count > 0) wantStr += `${count}${resourceIcons[res]} `;
             }
             
-            let buttonsHtml = '';
-            if (acceptedPlayers.length > 0) {
-                // Show buttons for each player who accepted
-                buttonsHtml = '<div class="trade-offer-accepted">';
-                for (const player of acceptedPlayers) {
-                    const playerData = currentBoardData.players?.find(p => p.name === player);
-                    const color = playerData?.color || '#e74c3c';
-                    buttonsHtml += `<button class="accepted-player" style="background-color: ${color}" onclick="completeTrade(${offer.id}, '${player}')">${player}</button>`;
-                }
-                buttonsHtml += '</div>';
-            } else {
-                buttonsHtml = `<div class="trade-offer-actions"><button class="decline-btn" onclick="cancelTrade(${offer.id})">Cancel</button></div>`;
+            // Show 3 buttons for each player - grey if not accepted, colored if accepted
+            let buttonsHtml = '<div class="trade-offer-actions" style="display: flex; gap: 10px; justify-content: center;">';
+            const allPlayers = currentBoardData.players || [];
+            for (const player of allPlayers) {
+                if (player.name === currentUser) continue;
+                const hasAccepted = accepted[player.name] === true;
+                const btnColor = hasAccepted ? (player.color || '#27 '#7ae60') :f8c8d';
+                const btnText = hasAccepted ? player.name : player.name;
+                buttonsHtml += `<button class="accepted-player" style="background-color: ${btnColor}" onclick="completeTrade(${offer.id}, '${player.name}')">${btnText}</button>`;
             }
+            buttonsHtml += '</div>';
             
             myOffersHtml += `
                 <div class="trade-offer" data-offer-id="${offer.id}" data-created="${offer.created_at}">
@@ -462,7 +448,6 @@ function renderTradeOffers() {
                         <span>→</span>
                         <span class="want">${wantStr}</span>
                     </div>
-                    ${acceptedPlayers.length > 0 ? `<span>${acceptedPlayers.length} accepted</span>` : ''}
                     ${buttonsHtml}
                 </div>
             `;
