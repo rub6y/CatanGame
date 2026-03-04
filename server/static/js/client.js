@@ -295,7 +295,7 @@ function renderResourcePanel() {
     
     let html = '';
     for (const [type, count] of Object.entries(resources)) {
-        html += `<div class="resource res-${type}"><span>${resourceIcons[type]} ${resourceNames[type]}</span><span>${count}</span></div>`;
+        html += `<div class="resource res-${type}">${resourceIcons[type]}${count}</div>`;
     }
     
     resourceDisplay.innerHTML = html;
@@ -330,7 +330,7 @@ function renderBank() {
     let html = '';
     for (const [type, count] of Object.entries(bank)) {
         const percentage = Math.round((count / RESOURCE_LIMIT) * 100 / 25) * 25;
-        html += `<div class="bank-resource bank-${type}"><span>${resourceIcons[type]} ${resourceNames[type]}</span><span>${percentage}%</span></div>`;
+        html += `<div class="bank-resource bank-${type}">${resourceIcons[type]}${percentage}%</div>`;
     }
     
     bankDisplay.innerHTML = html;
@@ -357,13 +357,12 @@ function renderTradeOffers() {
         ore: '🪨'
     };
     
-    // Render active offers (not from current user)
-    let offersHtml = '<h4>Active Offers:</h4>';
+    // Render active offers (not from current user) - only if there are offers
+    let offersHtml = '';
     const otherOffers = activeTrades.filter(t => t.proposer !== currentUser);
     
-    if (otherOffers.length === 0) {
-        offersHtml += '<p class="no-offers">No active trade offers</p>';
-    } else {
+    if (otherOffers.length > 0) {
+        offersHtml = '<h4>Active Offers:</h4>';
         for (const offer of otherOffers) {
             const accepted = offer.accepted_by || {};
             const acceptedPlayers = Object.keys(accepted).filter(p => accepted[p] === true);
@@ -404,13 +403,12 @@ function renderTradeOffers() {
     }
     tradeOffersDiv.innerHTML = offersHtml;
     
-    // Render my offers
-    let myOffersHtml = '<h4>Your Offers:</h4>';
+    // Render my offers - only if there are offers
+    let myOffersHtml = '';
     const myOfferList = currentBoardData.trades?.my_offers?.[currentUser] || [];
     
-    if (myOfferList.length === 0) {
-        myOffersHtml += '<p class="no-offers">No active offers</p>';
-    } else {
+    if (myOfferList.length > 0) {
+        myOffersHtml = '<h4>Your Offers:</h4>';
         for (const offer of myOfferList) {
             const accepted = offer.accepted_by || {};
             const acceptedPlayers = Object.keys(accepted).filter(p => accepted[p] === true);
