@@ -170,15 +170,15 @@ class Game:
         if not proposer_player or not responder_player:
             return False
         
-        # Transfer offered resources from responder to proposer
+        # Transfer offered resources FROM proposer TO responder
         for resource, count in offer['offered_resources'].items():
-            responder_player.resources[resource] = responder_player.resources.get(resource, 0) - count
-            proposer_player.resources[resource] = proposer_player.resources.get(resource, 0) + count
-        
-        # Transfer wanted resources from proposer to responder
-        for resource, count in offer['wanted_resources'].items():
             proposer_player.resources[resource] = proposer_player.resources.get(resource, 0) - count
             responder_player.resources[resource] = responder_player.resources.get(resource, 0) + count
+        
+        # Transfer wanted resources FROM responder TO proposer
+        for resource, count in offer['wanted_resources'].items():
+            responder_player.resources[resource] = responder_player.resources.get(resource, 0) - count
+            proposer_player.resources[resource] = proposer_player.resources.get(resource, 0) + count
         
         return True
     
