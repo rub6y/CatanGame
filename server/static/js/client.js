@@ -398,6 +398,7 @@ function renderTradeOffers() {
 `;
             
             // Show all players as accept options
+            let buttonsHtml = '';
             const allPlayers = currentBoardData.players || [];
             for (const player of allPlayers) {
                 if (player.name === offer.proposer) continue; // Skip proposer
