@@ -361,16 +361,54 @@ def handle_propose_trade(data):
             emit('error', {'message': f'Not enough {resource}: have {available}, offering {count}'})
             return
     
-    offer = current_game.propose_trade(name, offered, wanted)
-    if offer:
-        print(f"Trade proposed successfully! Offer ID: {offer['id']}")
-        emit('trade_proposed', {'offer': offer}, broadcast=True)
-        # Also emit board_updated to refresh everyone's trade lists
+    # Check if this is a bank trade (4:1 or better ratio)
+    offered_total = sum(offered.values())
+    wanted_total = sum(wanted.values())
+    ratio = offered_total / wanted_total if wanted_total > 0 else 0
+    
+    if ratio >= current_game.trade_manager.bank_trade_ratio:
+        # Execute bank trade immediately
+        print(f"Auto-completing bank trade! Ratio: {ratio}:1")
+        
+        # Transfer resources from player to bank
+        for resource, count in offered.items():
+            player.resources[resource] = player.resources.get(resource, 0) - count
+            for _ in range(count):
+                current_game.bank.return_resources(resource)
+        
+        # Transfer resources from bank to player
+        for resource, count in wanted.items():
+            if current_game.bank.take(resource):
+                player.resources[resource] = player.resources.get(resource, 0) + count
+            else:
+                # Bank doesn't have enough - reverse and error
+                for r, c in offered.items():
+                    player.resources[r] = player.resources.get(r, 0) + c
+                    for _ in range(c):
+                        current_game.bank.take(r)
+                emit('error', {'message': 'Bank does not have enough resources'})
+                return
+        
+        print(f"Bank trade completed for {name}")
+        emit('bank_trade_completed', {
+            'offered': offered,
+            'wanted': wanted
+        }, broadcast=True)
         emit('board_updated', {
             'board': current_game.get_board_data()
         }, broadcast=True)
     else:
-        emit('error', {'message': 'Maximum number of trade offers reached'})
+        # Not a bank trade - create regular offer
+        offer = current_game.propose_trade(name, offered, wanted)
+        if offer:
+            print(f"Trade proposed successfully! Offer ID: {offer['id']}")
+            emit('trade_proposed', {'offer': offer}, broadcast=True)
+            # Also emit board_updated to refresh everyone's trade lists
+            emit('board_updated', {
+                'board': current_game.get_board_data()
+            }, broadcast=True)
+        else:
+            emit('error', {'message': 'Maximum number of trade offers reached'})
 
 
 @socketio.on('accept_trade')
@@ -384,14 +422,17 @@ def handle_accept_trade(data):
     if not name or not offer_id:
         return
     
-    # Check player has the wanted resources
-    player = current_game.get_player(name)
+    # Get offer first
     offer = current_game.trade_manager.offers.get(offer_id)
     if not offer:
         emit('error', {'message': 'Trade offer not found'})
         return
     
-    # Check if player has resources
+    # Check player has the wanted resources (what the proposer wants)
+    player = current_game.get_player(name)
+    if not player:
+        return
+    
     for resource, count in offer['wanted_resources'].items():
         if player.resources.get(resource, 0) < count:
             emit('error', {'message': f'Not enough {resource} to accept this trade'})
@@ -400,21 +441,9 @@ def handle_accept_trade(data):
     if current_game.accept_trade(offer_id, name):
         print(f"Player {name} accepted trade #{offer_id}")
         emit('trade_accepted', {'offer_id': offer_id, 'player': name}, broadcast=True)
-        
-        # Check if this is a bank trade (4:1 or better) - auto-complete with bank
-        offer = current_game.trade_manager.offers.get(offer_id)
-        if offer and current_game.trade_manager._is_bank_trade_offer(offer):
-            print(f"Auto-completing bank trade #{offer_id}")
-            result = current_game.complete_trade(offer_id, offer['proposer'], None)
-            if result and result['type'] == 'bank':
-                current_game.execute_bank_trade(offer_id, offer['proposer'])
-                print(f"Bank trade completed for {offer['proposer']}")
-                emit('trade_completed', {'offer_id': offer_id, 'type': 'bank'}, broadcast=True)
-        else:
-            # Not a bank trade - emit board_updated for normal flow
-            emit('board_updated', {
-                'board': current_game.get_board_data()
-            }, broadcast=True)
+        emit('board_updated', {
+            'board': current_game.get_board_data()
+        }, broadcast=True)
     else:
         emit('error', {'message': 'Could not accept trade'})
 
