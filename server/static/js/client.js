@@ -436,7 +436,7 @@ function renderTradeOffers() {
                 }
                 buttonsHtml += '</div>';
             } else {
-                buttonsHtml = '<div class="trade-offer-actions"><button class="decline-btn" onclick="cancelTrade(${offer.id})">Cancel</button></div>';
+                buttonsHtml = `<div class="trade-offer-actions"><button class="decline-btn" onclick="cancelTrade(${offer.id})">Cancel</button></div>`;
             }
             
             myOffersHtml += `
