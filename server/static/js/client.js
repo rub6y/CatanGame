@@ -432,7 +432,7 @@ function renderTradeOffers() {
             for (const player of allPlayers) {
                 if (player.name === currentUser) continue;
                 const hasAccepted = accepted[player.name] === true;
-                const btnColor = hasAccepted ? (player.color || '#27 '#7ae60') :f8c8d';
+                const btnColor = hasAccepted ? (player.color || '#27ae60') : '#7f8c8d';
                 const btnText = hasAccepted ? player.name : player.name;
                 buttonsHtml += `<button class="accepted-player" style="background-color: ${btnColor}" onclick="completeTrade(${offer.id}, '${player.name}')">${btnText}</button>`;
             }
