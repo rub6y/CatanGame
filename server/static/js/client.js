@@ -827,6 +827,9 @@ socket.on('board_updated', (data) => {
 
 socket.on('trade_proposed', (data) => {
     console.log('Trade proposed:', data.offer);
+    if (currentBoardData && currentBoardData.trades) {
+        currentBoardData.trades.active.push(data.offer);
+    }
     renderTradeOffers();
 });
 
