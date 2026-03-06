@@ -365,7 +365,7 @@ def handle_place_road(data):
                 emit('error', {'message': 'Road must be connected to your settlement'})
                 return
     
-    # Playing phase: check road is adjacent to existing road
+    # Playing phase: check road is adjacent to player's own road
     if current_game.game_phase == "playing":
         has_adjacent_road = False
         edge_vertices = edge.neighbors.get('vertices', [])
@@ -376,13 +376,15 @@ def handle_place_road(data):
                     if connected_edge_key != edge_key:
                         connected_edge = current_game.edges.get(connected_edge_key)
                         if connected_edge and connected_edge.road is not None:
-                            has_adjacent_road = True
-                            break
+                            # Check if it's the same player's road
+                            if connected_edge.road.get('player') == name:
+                                has_adjacent_road = True
+                                break
             if has_adjacent_road:
                 break
         
         if not has_adjacent_road:
-            emit('error', {'message': 'Road must be connected to another road'})
+            emit('error', {'message': 'Road must be connected to your own road'})
             return
     
     # Place road (store with player name)
