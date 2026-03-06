@@ -112,6 +112,11 @@ colorPicker.addEventListener('change', () => {
  * Handle Place Settlement button click - toggle settlement placement mode
  */
 placeSettlementBtn.addEventListener('click', () => {
+    // Don't allow manual toggle during setup phase
+    if (currentBoardData?.game_phase === 'setup') {
+        return;
+    }
+    
     if (selectedBuilding === 'settlement') {
         // Deselect
         selectedBuilding = null;
@@ -130,6 +135,11 @@ placeSettlementBtn.addEventListener('click', () => {
  * Handle Place Road button click - toggle road placement mode
  */
 placeRoadBtn.addEventListener('click', () => {
+    // Don't allow manual toggle during setup phase
+    if (currentBoardData?.game_phase === 'setup') {
+        return;
+    }
+    
     if (selectedBuilding === 'road') {
         // Deselect
         selectedBuilding = null;
@@ -151,7 +161,15 @@ document.getElementById('board-canvas').addEventListener('click', (event) => {
     if (!selectedBuilding || currentUser !== currentPlayer) {
         return;
     }
-
+    
+    // During setup phase, ensure selected building matches setup_action
+    if (currentBoardData?.game_phase === 'setup') {
+        const setupAction = currentBoardData.setup_action || 'settlement';
+        if (selectedBuilding !== setupAction) {
+            return;
+        }
+    }
+    
     const canvas = event.target;
     const rect = canvas.getBoundingClientRect();
     const clickX = event.clientX - rect.left;
