@@ -85,6 +85,12 @@ class Game:
         self.current_player_index = 0
         self.game_state = "waiting"
         
+        # Setup phase variables
+        self.game_phase = "setup"  # "setup" or "playing"
+        self.setup_turn = 0  # 0-7 for 8 setup turns
+        self.setup_action = "settlement"  # "settlement" or "road"
+        self.last_setup_settlement = None  # vertex key of last placed settlement
+        
         # Board configuration
         # hex_radius=2 gives us 19 land hexes (standard Catan)
         # edge_radius=3 adds one ring of ocean tiles around the land
@@ -134,6 +140,34 @@ class Game:
     def get_player_names(self) -> list:
         """Get list of player names (for compatibility)."""
         return [p.name for p in self.players]
+    
+    def _get_setup_player_index(self) -> int:
+        """Get player index based on setup turn order.
+        
+        Setup order: 0,1,2,3,3,2,1,0 (A->B->C->D->D->C->B->A)
+        """
+        num_players = len(self.players)
+        if self.setup_turn < num_players:
+            # First round: forward (0,1,2,3)
+            return self.setup_turn
+        else:
+            # Second round: reverse (3,2,1,0)
+            return (2 * num_players - 1) - self.setup_turn
+    
+    def _advance_setup_turn(self):
+        """Advance to next setup turn. Returns True if setup complete."""
+        self.setup_turn += 1
+        self.setup_action = "settlement"
+        self.last_setup_settlement = None
+        
+        num_players = len(self.players)
+        if self.setup_turn >= num_players * 2:
+            # Setup complete - switch to playing phase
+            self.game_phase = "playing"
+            self.current_player_index = 0
+            print(f"=== Setup complete! Starting normal play. ===")
+            return True
+        return False
     
     def propose_trade(self, proposer: str, offered_resources: dict, wanted_resources: dict):
         """Propose a new trade offer."""
@@ -562,7 +596,10 @@ class Game:
             'trades': {
                 'active': self.trade_manager.get_all_active(),
                 'my_offers': my_offers
-            }
+            },
+            'game_phase': self.game_phase,
+            'setup_action': self.setup_action,
+            'current_player': self.players[self._get_setup_player_index()].name if self.game_phase == "setup" else self.players[self.current_player_index].name
         }
     
     def distribute_resources(self, dice_total: int):

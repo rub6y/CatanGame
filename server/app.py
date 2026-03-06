@@ -159,6 +159,11 @@ def handle_start_game():
 def handle_next_turn(data):
     if current_game is None or current_game.game_state != "started":
         return
+    
+    # Don't allow manual turn advancement during setup phase
+    if current_game.game_phase == "setup":
+        emit('error', {'message': 'Cannot skip turn during setup phase'})
+        return
 
     current_player = current_game.players[current_game.current_player_index]
     current_player_name = current_player.name if current_player else None
@@ -211,6 +216,11 @@ def handle_roll_dice(data):
     if current_game is None or current_game.game_state != "started":
         return
     
+    # Don't allow dice rolling during setup phase
+    if current_game.game_phase == "setup":
+        emit('error', {'message': 'Cannot roll dice during setup phase'})
+        return
+    
     name = data.get('name', '')
     
     if not name:
@@ -254,8 +264,12 @@ def handle_place_settlement(data):
     if not name or not vertex_key:
         return
     
-    # Check if it's this player's turn
-    current_player = current_game.players[current_game.current_player_index]
+    # Get current player based on phase
+    if current_game.game_phase == "setup":
+        current_player = current_game.players[current_game._get_setup_player_index()]
+    else:
+        current_player = current_game.players[current_game.current_player_index]
+    
     if current_player.name != name:
         emit('error', {'message': f'Only {current_player.name} can place buildings'})
         return
@@ -288,6 +302,20 @@ def handle_place_settlement(data):
     
     print(f"Player {name} placed settlement at {vertex_key}")
     
+    # Setup phase logic
+    if current_game.game_phase == "setup":
+        current_game.last_setup_settlement = vertex_key
+        
+        # Check if we need to place road next (during setup, settlement always followed by road)
+        if current_game.setup_action == "settlement":
+            current_game.setup_action = "road"
+        else:
+            # Already placing road, this shouldn't happen but handle it
+            current_game.setup_action = "settlement"
+    else:
+        # Normal playing phase
+        current_game.setup_action = "settlement"
+    
     # Broadcast updated board
     emit('board_updated', {
         'board': current_game.get_board_data()
@@ -305,8 +333,12 @@ def handle_place_road(data):
     if not name or not edge_key:
         return
     
-    # Check if it's this player's turn
-    current_player = current_game.players[current_game.current_player_index]
+    # Get current player based on phase
+    if current_game.game_phase == "setup":
+        current_player = current_game.players[current_game._get_setup_player_index()]
+    else:
+        current_player = current_game.players[current_game.current_player_index]
+    
     if current_player.name != name:
         emit('error', {'message': f'Only {current_player.name} can place buildings'})
         return
@@ -323,10 +355,24 @@ def handle_place_road(data):
         emit('error', {'message': 'This location already has a road'})
         return
     
+    # Setup phase: check road is adjacent to last settlement
+    if current_game.game_phase == "setup" and current_game.last_setup_settlement:
+        settlement_vertex = current_game.vertices.get(current_game.last_setup_settlement)
+        if settlement_vertex:
+            # Get vertices connected to this edge
+            edge_vertices = edge.neighbors.get('vertices', [])
+            if current_game.last_setup_settlement not in edge_vertices:
+                emit('error', {'message': 'Road must be connected to your settlement'})
+                return
+    
     # Place road (store with player name)
     edge.road = {'player': name}
     
     print(f"Player {name} placed road at {edge_key}")
+    
+    # Setup phase: advance to next player after road
+    if current_game.game_phase == "setup":
+        current_game._advance_setup_turn()
     
     # Broadcast updated board
     emit('board_updated', {
