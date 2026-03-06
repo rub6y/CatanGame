@@ -405,6 +405,7 @@ function updateGameUI(boardData) {
     const rollDiceBtn = document.getElementById('roll-dice-btn');
     const placeSettlementBtn = document.getElementById('place-settlement-btn');
     const placeRoadBtn = document.getElementById('place-road-btn');
+    const upgradeCityBtn = document.getElementById('upgrade-city-btn');
     const nextTurnBtn = document.getElementById('next-turn-btn');
     
     if (!boardData) return;
@@ -430,9 +431,11 @@ function updateGameUI(boardData) {
             if (setupAction === 'settlement') {
                 placeSettlementBtn.classList.add('active');
                 placeRoadBtn.classList.remove('active');
+                upgradeCityBtn.classList.remove('active');
             } else {
                 placeRoadBtn.classList.add('active');
                 placeSettlementBtn.classList.remove('active');
+                upgradeCityBtn.classList.remove('active');
             }
         } else {
             // Not my turn - clear selection
@@ -440,6 +443,7 @@ function updateGameUI(boardData) {
             gameBoard.classList.remove('placement-mode');
             placeSettlementBtn.classList.remove('active');
             placeRoadBtn.classList.remove('active');
+            upgradeCityBtn.classList.remove('active');
         }
         
         // Show setup indicator
@@ -463,6 +467,7 @@ function updateGameUI(boardData) {
         gameBoard.classList.remove('placement-mode');
         placeSettlementBtn.classList.remove('active');
         placeRoadBtn.classList.remove('active');
+        upgradeCityBtn.classList.remove('active');
         
         // Hide setup indicator
         setupIndicator.classList.add('hidden');
@@ -749,6 +754,7 @@ function updateConsoleVisibility() {
         colorPicker.style.display = 'inline-block';
         placeSettlementBtn.style.display = 'inline-block';
         placeRoadBtn.style.display = 'inline-block';
+        upgradeCityBtn.style.display = 'inline-block';
     } else {
         gameConsole.classList.remove('hidden');
         nextTurnBtn.disabled = true;
@@ -756,12 +762,14 @@ function updateConsoleVisibility() {
         colorPicker.style.display = 'inline-block';
         placeSettlementBtn.style.display = 'inline-block';
         placeRoadBtn.style.display = 'inline-block';
+        upgradeCityBtn.style.display = 'inline-block';
     }
     
     // Reset building selection when turn changes
     selectedBuilding = null;
     placeSettlementBtn.classList.remove('active');
     placeRoadBtn.classList.remove('active');
+    upgradeCityBtn.classList.remove('active');
     gameBoard.classList.remove('placement-mode');
 }
 
@@ -769,14 +777,19 @@ function updateConsoleVisibility() {
  * Update button colors and title based on current user
  */
 function updateButtonColors() {
-    const buttons = [rollDiceBtn, placeSettlementBtn, placeRoadBtn, nextTurnBtn];
+    const buttons = [rollDiceBtn, placeSettlementBtn, placeRoadBtn, upgradeCityBtn, nextTurnBtn];
     const currentUserData = currentBoardData?.players?.find(p => p.name === currentUser);
     const playerColor = currentUserData?.color || '#e67e22';
     const textColor = getContrastColor(playerColor);
     
+    // Use player's color only when it's their turn, otherwise use default
+    const isMyTurn = currentUser === currentPlayer;
+    const activeColor = isMyTurn ? playerColor : '#7f8c8d';
+    const activeTextColor = isMyTurn ? textColor : '#ffffff';
+    
     buttons.forEach(btn => {
-        btn.style.backgroundColor = playerColor;
-        btn.style.color = textColor;
+        btn.style.backgroundColor = activeColor;
+        btn.style.color = activeTextColor;
     });
     
     // Update title color
