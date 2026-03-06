@@ -612,8 +612,11 @@ class Game:
         gained_resources = {}
         
         for vertex_key, vertex in self.vertices.items():
-            if not vertex.building or vertex.building.get('type') != 'settlement':
+            if not vertex.building or vertex.building.get('type') not in ('settlement', 'city'):
                 continue
+            
+            building_type = vertex.building.get('type')
+            resource_amount = 2 if building_type == 'city' else 1
             
             player_name = vertex.building.get('player')
             if not player_name:
@@ -629,13 +632,14 @@ class Game:
                 
                 hex_obj = self.hexes[hex_key]
                 if hex_obj.number == dice_total and hex_obj.type not in ('desert', 'ocean'):
-                    # Try to take from bank
-                    if self.bank.take(hex_obj.type):
-                        player.resources[hex_obj.type] = player.resources.get(hex_obj.type, 0) + 1
-                        
-                        if player_name not in gained_resources:
-                            gained_resources[player_name] = {}
-                        gained_resources[player_name][hex_obj.type] = gained_resources[player_name].get(hex_obj.type, 0) + 1
+                    # Try to take resource(s) from bank
+                    for _ in range(resource_amount):
+                        if self.bank.take(hex_obj.type):
+                            player.resources[hex_obj.type] = player.resources.get(hex_obj.type, 0) + 1
+                            
+                            if player_name not in gained_resources:
+                                gained_resources[player_name] = {}
+                            gained_resources[player_name][hex_obj.type] = gained_resources[player_name].get(hex_obj.type, 0) + 1
         
         if gained_resources:
             print(f"Resources distributed (rolled {dice_total}):")

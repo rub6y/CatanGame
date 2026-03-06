@@ -189,7 +189,7 @@ function drawEdge(ctx, x1, y1, x2, y2) {
  * @param {string} playerColor - Color of the player who owns this settlement
  */
 function drawSettlement(ctx, x, y, playerColor) {
-    const size = 10;
+    const size = 14;
     ctx.fillStyle = playerColor || '#888888';
     ctx.fillRect(x - size/2, y - size/2, size, size);
     ctx.strokeStyle = '#000000';
@@ -199,7 +199,7 @@ function drawSettlement(ctx, x, y, playerColor) {
 
 /**
  * Draw a city at a vertex position.
- * City appears as a larger colored shape (double-sized square).
+ * City appears as a triangle.
  * 
  * @param {CanvasRenderingContext2D} ctx - Canvas context
  * @param {number} x - X position
@@ -209,10 +209,15 @@ function drawSettlement(ctx, x, y, playerColor) {
 function drawCity(ctx, x, y, playerColor) {
     const size = 16;
     ctx.fillStyle = playerColor || '#888888';
-    ctx.fillRect(x - size/2, y - size/2, size, size);
+    ctx.beginPath();
+    ctx.moveTo(x, y - size/2);
+    ctx.lineTo(x - size/2, y + size/2);
+    ctx.lineTo(x + size/2, y + size/2);
+    ctx.closePath();
+    ctx.fill();
     ctx.strokeStyle = '#000000';
     ctx.lineWidth = 2;
-    ctx.strokeRect(x - size/2, y - size/2, size, size);
+    ctx.stroke();
 }
 
 /**
@@ -307,27 +312,15 @@ function renderBoard(boardData, canvasId, highlightNumber = null) {
         drawHex(ctx, pos.x, pos.y, hexRadius - 2, getHexColor(hex.type), hex.number, isLand, isHighlighted);
     }
     
-    // Calculate and store vertex positions
+    // Calculate and store vertex positions (no drawing yet)
     const vertexPositions = {};
     for (const key in vertices) {
         const coords = parseKey(key);
         const pos = cubeToPixel(coords.x, coords.y, coords.z, hexRadius);
         vertexPositions[key] = pos;
-        
-        // Check if there's a building at this vertex
-        const vertex = vertices[key];
-        if (vertex.building) {
-            const playerColor = playerColors[vertex.building.player] || null;
-            if (vertex.building.type === 'settlement') {
-                drawSettlement(ctx, pos.x, pos.y, playerColor);
-            } else if (vertex.building.type === 'city') {
-                drawCity(ctx, pos.x, pos.y, playerColor);
-            }
-        }
-        // Note: Empty vertices are not drawn (only clickable)
     }
     
-    // Calculate and store edge positions
+    // Calculate and store edge positions AND draw roads
     const edgePositions = {};
     for (const key in edges) {
         const edge = edges[key];
@@ -346,12 +339,27 @@ function renderBoard(boardData, canvasId, highlightNumber = null) {
                     centerY: (pos1.y + pos2.y) / 2
                 };
                 
-                // Check if there's a road at this edge
+                // Draw road at this edge (draw roads first so buildings appear on top)
                 if (edge.road) {
                     const playerColor = playerColors[edge.road.player] || null;
                     drawRoad(ctx, pos1.x, pos1.y, pos2.x, pos2.y, playerColor);
                 }
                 // Note: Empty edges are not drawn (only clickable)
+            }
+        }
+    }
+    
+    // Draw buildings on top of roads
+    for (const key in vertices) {
+        const vertex = vertices[key];
+        const pos = vertexPositions[key];
+        
+        if (vertex.building) {
+            const playerColor = playerColors[vertex.building.player] || null;
+            if (vertex.building.type === 'settlement') {
+                drawSettlement(ctx, pos.x, pos.y, playerColor);
+            } else if (vertex.building.type === 'city') {
+                drawCity(ctx, pos.x, pos.y, playerColor);
             }
         }
     }

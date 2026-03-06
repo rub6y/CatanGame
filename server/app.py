@@ -417,6 +417,64 @@ def handle_place_road(data):
     }, broadcast=True)
 
 
+@socketio.on('upgrade_city')
+def handle_upgrade_city(data):
+    if current_game is None or current_game.game_state != "started":
+        return
+    
+    name = data.get('name', '')
+    vertex_key = data.get('vertex', '')
+    
+    if not name or not vertex_key:
+        return
+    
+    # Get current player based on phase
+    if current_game.game_phase == "setup":
+        emit('error', {'message': 'Cannot upgrade to city during setup phase'})
+        return
+    else:
+        current_player = current_game.players[current_game.current_player_index]
+    
+    if current_player.name != name:
+        emit('error', {'message': f'Only {current_player.name} can upgrade buildings'})
+        return
+    
+    # Check if vertex exists
+    if vertex_key not in current_game.vertices:
+        emit('error', {'message': 'Invalid vertex'})
+        return
+    
+    vertex = current_game.vertices[vertex_key]
+    
+    # Check if there's a building
+    if vertex.building is None:
+        emit('error', {'message': 'No building at this location'})
+        return
+    
+    # Check if it's a settlement (not already a city)
+    if vertex.building.get('type') != 'settlement':
+        emit('error', {'message': 'Can only upgrade settlements to cities'})
+        return
+    
+    # Check if it's the player's own settlement
+    if vertex.building.get('player') != name:
+        emit('error', {'message': 'Can only upgrade your own settlements'})
+        return
+    
+    # Upgrade to city (free for now - cost can be added later)
+    vertex.building = {
+        'type': 'city',
+        'player': name
+    }
+    
+    print(f"Player {name} upgraded settlement to city at {vertex_key}")
+    
+    # Broadcast updated board
+    emit('board_updated', {
+        'board': current_game.get_board_data()
+    }, broadcast=True)
+
+
 @socketio.on('propose_trade')
 def handle_propose_trade(data):
     if current_game is None or current_game.game_state != "started":

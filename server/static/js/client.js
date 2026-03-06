@@ -32,6 +32,7 @@ const nextTurnBtn = document.getElementById('next-turn-btn');
 const colorPicker = document.getElementById('color-picker');
 const placeSettlementBtn = document.getElementById('place-settlement-btn');
 const placeRoadBtn = document.getElementById('place-road-btn');
+const upgradeCityBtn = document.getElementById('upgrade-city-btn');
 const rollDiceBtn = document.getElementById('roll-dice-btn');
 const diceDisplay = document.getElementById('dice-display');
 const resourceDisplay = document.getElementById('resource-display');
@@ -127,6 +128,7 @@ placeSettlementBtn.addEventListener('click', () => {
         selectedBuilding = 'settlement';
         placeSettlementBtn.classList.add('active');
         placeRoadBtn.classList.remove('active');
+        upgradeCityBtn.classList.remove('active');
         gameBoard.classList.add('placement-mode');
     }
 });
@@ -150,6 +152,31 @@ placeRoadBtn.addEventListener('click', () => {
         selectedBuilding = 'road';
         placeRoadBtn.classList.add('active');
         placeSettlementBtn.classList.remove('active');
+        upgradeCityBtn.classList.remove('active');
+        gameBoard.classList.add('placement-mode');
+    }
+});
+
+/**
+ * Handle Upgrade City button click - toggle city upgrade mode
+ */
+upgradeCityBtn.addEventListener('click', () => {
+    // Don't allow during setup phase
+    if (currentBoardData?.game_phase === 'setup') {
+        return;
+    }
+    
+    if (selectedBuilding === 'city') {
+        // Deselect
+        selectedBuilding = null;
+        upgradeCityBtn.classList.remove('active');
+        gameBoard.classList.remove('placement-mode');
+    } else {
+        // Select city upgrade
+        selectedBuilding = 'city';
+        upgradeCityBtn.classList.add('active');
+        placeSettlementBtn.classList.remove('active');
+        placeRoadBtn.classList.remove('active');
         gameBoard.classList.add('placement-mode');
     }
 });
@@ -193,6 +220,16 @@ document.getElementById('board-canvas').addEventListener('click', (event) => {
             socket.emit('place_road', { 
                 name: currentUser, 
                 edge: edgeKey 
+            });
+        }
+    } else if (selectedBuilding === 'city') {
+        // Find nearest vertex to upgrade to city
+        const vertexKey = window.BoardRenderer.findNearestVertex(clickX, clickY);
+        if (vertexKey) {
+            console.log('Upgrading to city at:', vertexKey);
+            socket.emit('upgrade_city', { 
+                name: currentUser, 
+                vertex: vertexKey 
             });
         }
     }
