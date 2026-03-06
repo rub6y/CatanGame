@@ -236,12 +236,14 @@ button:hover {
 }
 
 #place-settlement-btn,
-#place-road-btn {
+#place-road-btn,
+#upgrade-city-btn {
     padding: 0.6rem 1rem;
 }
 
 #place-settlement-btn.active,
-#place-road-btn.active {
+#place-road-btn.active,
+#upgrade-city-btn.active {
     background-color: #27ae60;
     border: 2px solid #2ecc71;
 }
