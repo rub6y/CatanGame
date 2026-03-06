@@ -294,6 +294,21 @@ def handle_place_settlement(data):
                 emit('error', {'message': 'Cannot place settlement next to another settlement'})
                 return
     
+    # Playing phase: check settlement is adjacent to player's own road
+    if current_game.game_phase == "playing":
+        has_adjacent_road = False
+        vertex_edges = vertex.neighbors.get('edges', [])
+        for edge_key_check in vertex_edges:
+            edge_obj = current_game.edges.get(edge_key_check)
+            if edge_obj and edge_obj.road is not None:
+                if edge_obj.road.get('player') == name:
+                    has_adjacent_road = True
+                    break
+        
+        if not has_adjacent_road:
+            emit('error', {'message': 'Settlement must be connected to your own road'})
+            return
+    
     # Place settlement (store as settlement type with player name)
     vertex.building = {
         'type': 'settlement',
