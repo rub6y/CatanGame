@@ -356,19 +356,42 @@ function updateGameUI(boardData) {
     
     const gamePhase = boardData.game_phase || 'playing';
     
+    // Update currentPlayer variable from board data
+    if (boardData.current_player) {
+        currentPlayer = boardData.current_player;
+    }
+    
     if (gamePhase === 'setup') {
-        // Hide game buttons during setup
-        rollDiceBtn.classList.add('hidden');
-        placeSettlementBtn.classList.add('hidden');
-        placeRoadBtn.classList.add('hidden');
-        nextTurnBtn.classList.add('hidden');
+        // During setup, auto-select building type based on setup_action
+        const setupAction = boardData.setup_action || 'settlement';
+        const isMyTurn = currentUser === currentPlayer;
+        
+        if (isMyTurn) {
+            // Auto-select the required building type
+            selectedBuilding = setupAction;
+            gameBoard.classList.add('placement-mode');
+            
+            // Update button states
+            if (setupAction === 'settlement') {
+                placeSettlementBtn.classList.add('active');
+                placeRoadBtn.classList.remove('active');
+            } else {
+                placeRoadBtn.classList.add('active');
+                placeSettlementBtn.classList.remove('active');
+            }
+        } else {
+            // Not my turn - clear selection
+            selectedBuilding = null;
+            gameBoard.classList.remove('placement-mode');
+            placeSettlementBtn.classList.remove('active');
+            placeRoadBtn.classList.remove('active');
+        }
         
         // Show setup indicator
         setupIndicator.classList.remove('hidden');
         
         // Get current player info
         const currentPlayerName = boardData.current_player || '';
-        const setupAction = boardData.setup_action || 'settlement';
         
         // Find player color
         const player = boardData.players?.find(p => p.name === currentPlayerName);
@@ -380,11 +403,11 @@ function updateGameUI(boardData) {
         const actionText = setupAction === 'road' ? 'placing road' : 'placing settlement';
         setupActionText.textContent = actionText;
     } else {
-        // Show game buttons during normal play
-        rollDiceBtn.classList.remove('hidden');
-        placeSettlementBtn.classList.remove('hidden');
-        placeRoadBtn.classList.remove('hidden');
-        nextTurnBtn.classList.remove('hidden');
+        // Normal play - restore button visibility and selection state
+        selectedBuilding = null;
+        gameBoard.classList.remove('placement-mode');
+        placeSettlementBtn.classList.remove('active');
+        placeRoadBtn.classList.remove('active');
         
         // Hide setup indicator
         setupIndicator.classList.add('hidden');
