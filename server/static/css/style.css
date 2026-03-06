@@ -208,6 +208,25 @@ button:hover {
     gap: 1rem;
 }
 
+#setup-indicator {
+    background-color: #f39c12;
+    color: #fff;
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    font-weight: bold;
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+#setup-indicator.hidden {
+    display: none;
+}
+
+#setup-player-name {
+    font-weight: bold;
+}
+
 #color-picker {
     width: 50px;
     height: 40px;

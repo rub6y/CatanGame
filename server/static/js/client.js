@@ -341,6 +341,57 @@ function renderBank() {
 }
 
 /**
+ * Update game UI based on phase (setup vs playing)
+ */
+function updateGameUI(boardData) {
+    const setupIndicator = document.getElementById('setup-indicator');
+    const setupPlayerName = document.getElementById('setup-player-name');
+    const setupActionText = document.getElementById('setup-action-text');
+    const rollDiceBtn = document.getElementById('roll-dice-btn');
+    const placeSettlementBtn = document.getElementById('place-settlement-btn');
+    const placeRoadBtn = document.getElementById('place-road-btn');
+    const nextTurnBtn = document.getElementById('next-turn-btn');
+    
+    if (!boardData) return;
+    
+    const gamePhase = boardData.game_phase || 'playing';
+    
+    if (gamePhase === 'setup') {
+        // Hide game buttons during setup
+        rollDiceBtn.classList.add('hidden');
+        placeSettlementBtn.classList.add('hidden');
+        placeRoadBtn.classList.add('hidden');
+        nextTurnBtn.classList.add('hidden');
+        
+        // Show setup indicator
+        setupIndicator.classList.remove('hidden');
+        
+        // Get current player info
+        const currentPlayerName = boardData.current_player || '';
+        const setupAction = boardData.setup_action || 'settlement';
+        
+        // Find player color
+        const player = boardData.players?.find(p => p.name === currentPlayerName);
+        const playerColor = player?.color || '#e74c3c';
+        
+        setupPlayerName.textContent = currentPlayerName;
+        setupPlayerName.style.color = playerColor;
+        
+        const actionText = setupAction === 'road' ? 'placing road' : 'placing settlement';
+        setupActionText.textContent = actionText;
+    } else {
+        // Show game buttons during normal play
+        rollDiceBtn.classList.remove('hidden');
+        placeSettlementBtn.classList.remove('hidden');
+        placeRoadBtn.classList.remove('hidden');
+        nextTurnBtn.classList.remove('hidden');
+        
+        // Hide setup indicator
+        setupIndicator.classList.add('hidden');
+    }
+}
+
+/**
  * Render trade offers panel
  */
 function renderTradeOffers() {
@@ -692,6 +743,9 @@ socket.on('game_started', (data) => {
     // Render bank
     renderBank();
     
+    // Update UI based on game phase
+    updateGameUI(data.board);
+    
     // Update button colors
     updateButtonColors();
     
@@ -808,6 +862,7 @@ socket.on('board_updated', (data) => {
     renderResourcePanel();
     renderBank();
     renderTradeOffers();
+    updateGameUI(data.board);
     
     // Clear highlight after 2 seconds if there was one
     if (data.highlight) {
