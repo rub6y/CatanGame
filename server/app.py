@@ -272,6 +272,14 @@ def handle_place_settlement(data):
         emit('error', {'message': 'This location already has a building'})
         return
     
+    # Check if adjacent vertices have buildings (standard Catan rule)
+    for adjacent_vertex_key in vertex.neighbors.get('vertices', []):
+        if adjacent_vertex_key in current_game.vertices:
+            adjacent_vertex = current_game.vertices[adjacent_vertex_key]
+            if adjacent_vertex.building is not None:
+                emit('error', {'message': 'Cannot place settlement next to another settlement'})
+                return
+    
     # Place settlement (store as settlement type with player name)
     vertex.building = {
         'type': 'settlement',
