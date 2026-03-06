@@ -73,12 +73,7 @@ class Game:
         for i, name in enumerate(player_names):
             color = player_colors.get(name) or (self.PLAYER_COLORS[i] if i < len(self.PLAYER_COLORS) else '#ffffff')
             player = Player(name, color)
-            # Take initial resources from bank
-            for resource_type in ['wood', 'brick', 'sheep', 'wheat', 'ore']:
-                amount = random.randint(0, 3)
-                for _ in range(amount):
-                    if self.bank.take(resource_type):
-                        player.resources[resource_type] = player.resources.get(resource_type, 0) + 1
+            # No starting resources - players get resources from dice rolls
             self.players.append(player)
         
         self.observers = observers
