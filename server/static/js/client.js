@@ -292,6 +292,8 @@ function renderResourcePanel() {
         ore: 'Ore'
     };
     
+    const resources = player.resources || {};
+    
     const allResourceTypes = ['wood', 'brick', 'sheep', 'wheat', 'ore'];
     
     let html = '';
