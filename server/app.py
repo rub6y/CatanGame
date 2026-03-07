@@ -309,6 +309,15 @@ def handle_place_settlement(data):
             emit('error', {'message': 'Settlement must be connected to your own road'})
             return
     
+    # Playing phase: check and deduct cost
+    if current_game.game_phase == "playing":
+        if not current_game.can_afford(name, 'settlement'):
+            cost = current_game.get_cost('settlement')
+            cost_str = ', '.join(f"{v} {k}" for k, v in cost.items())
+            emit('error', {'message': f'Not enough resources. Need: {cost_str}'})
+            return
+        current_game.deduct_cost(name, 'settlement')
+    
     # Place settlement (store as settlement type with player name)
     vertex.building = {
         'type': 'settlement',
@@ -402,6 +411,15 @@ def handle_place_road(data):
             emit('error', {'message': 'Road must be connected to your own road'})
             return
     
+    # Playing phase: check and deduct cost
+    if current_game.game_phase == "playing":
+        if not current_game.can_afford(name, 'road'):
+            cost = current_game.get_cost('road')
+            cost_str = ', '.join(f"{v} {k}" for k, v in cost.items())
+            emit('error', {'message': f'Not enough resources. Need: {cost_str}'})
+            return
+        current_game.deduct_cost(name, 'road')
+    
     # Place road (store with player name)
     edge.road = {'player': name}
     
@@ -461,7 +479,15 @@ def handle_upgrade_city(data):
         emit('error', {'message': 'Can only upgrade your own settlements'})
         return
     
-    # Upgrade to city (free for now - cost can be added later)
+    # Check and deduct city cost
+    if not current_game.can_afford(name, 'city'):
+        cost = current_game.get_cost('city')
+        cost_str = ', '.join(f"{v} {k}" for k, v in cost.items())
+        emit('error', {'message': f'Not enough resources. Need: {cost_str}'})
+        return
+    current_game.deduct_cost(name, 'city')
+    
+    # Upgrade to city
     vertex.building = {
         'type': 'city',
         'player': name

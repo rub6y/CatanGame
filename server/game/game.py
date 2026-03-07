@@ -1,4 +1,6 @@
 import random
+import os
+import json
 
 from game.hex_models import Hex, Vertex, Edge
 from game.player import Player
@@ -91,6 +93,11 @@ class Game:
         # edge_radius=3 adds one ring of ocean tiles around the land
         self.hex_radius = 2
         self.edge_radius = 3
+        
+        # Load building costs from JSON file
+        costs_file = os.path.join(os.path.dirname(__file__), '..', 'data', 'costs.json')
+        with open(costs_file, 'r') as f:
+            self.building_costs = json.load(f)
         
         # Board data structures
         self.hexes = {}    # key -> Hex object
@@ -647,6 +654,37 @@ class Game:
                 resource_str = ', '.join(f"+{count} {resource}" for resource, count in resources.items())
                 print(f"  {player_name}: {resource_str}")
             print(f"  Bank: {self.bank}")
+    
+    def get_cost(self, building_type: str) -> dict:
+        """Get the cost for a building type."""
+        return self.building_costs.get(building_type, {})
+    
+    def can_afford(self, player_name: str, building_type: str) -> bool:
+        """Check if player can afford the building cost."""
+        player = self.get_player(player_name)
+        if not player:
+            return False
+        
+        cost = self.get_cost(building_type)
+        for resource, amount in cost.items():
+            if player.resources.get(resource, 0) < amount:
+                return False
+        return True
+    
+    def deduct_cost(self, player_name: str, building_type: str) -> bool:
+        """Deduct building cost from player's resources and return to bank. Returns True if successful."""
+        player = self.get_player(player_name)
+        if not player:
+            return False
+        
+        if not self.can_afford(player_name, building_type):
+            return False
+        
+        cost = self.get_cost(building_type)
+        for resource, amount in cost.items():
+            player.resources[resource] -= amount
+            self.bank.return_resources(resource, amount)
+        return True
     
     def start(self):
         """Start the game and shuffle player order."""
