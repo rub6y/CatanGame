@@ -160,6 +160,11 @@ def handle_next_turn(data):
     if current_game is None or current_game.game_state != "started":
         return
     
+    # Check if player must move robber first
+    if current_game.must_move_robber:
+        emit('error', {'message': 'You must move the robber first'})
+        return
+    
     # Don't allow manual turn advancement during setup phase
     if current_game.game_phase == "setup":
         emit('error', {'message': 'Cannot skip turn during setup phase'})
@@ -238,7 +243,12 @@ def handle_roll_dice(data):
     
     print(f"Player {name} rolled {dice1} + {dice2} = {total}")
     
-    current_game.distribute_resources(total)
+    # Set must_move_robber if 7 is rolled (resources not distributed)
+    if total == 7:
+        current_game.must_move_robber = True
+        current_game.distribute_resources(total)  # This will skip distribution
+    else:
+        current_game.distribute_resources(total)
     
     emit('dice_rolled', {
         'player': name,
@@ -256,6 +266,11 @@ def handle_roll_dice(data):
 @socketio.on('place_settlement')
 def handle_place_settlement(data):
     if current_game is None or current_game.game_state != "started":
+        return
+    
+    # Check if player must move robber first
+    if current_game.must_move_robber:
+        emit('error', {'message': 'You must move the robber first'})
         return
     
     name = data.get('name', '')
@@ -354,6 +369,11 @@ def handle_place_road(data):
     if current_game is None or current_game.game_state != "started":
         return
     
+    # Check if player must move robber first
+    if current_game.must_move_robber:
+        emit('error', {'message': 'You must move the robber first'})
+        return
+    
     name = data.get('name', '')
     edge_key = data.get('edge', '')
     
@@ -443,6 +463,11 @@ def handle_upgrade_city(data):
     if current_game is None or current_game.game_state != "started":
         return
     
+    # Check if player must move robber first
+    if current_game.must_move_robber:
+        emit('error', {'message': 'You must move the robber first'})
+        return
+    
     name = data.get('name', '')
     vertex_key = data.get('vertex', '')
     
@@ -504,9 +529,63 @@ def handle_upgrade_city(data):
     }, broadcast=True)
 
 
+@socketio.on('move_robber')
+def handle_move_robber(data):
+    if current_game is None or current_game.game_state != "started":
+        return
+    
+    # Can't move robber during setup
+    if current_game.game_phase == "setup":
+        emit('error', {'message': 'Cannot move robber during setup'})
+        return
+    
+    # Check if player must move robber
+    if not current_game.must_move_robber:
+        emit('error', {'message': 'You do not need to move the robber'})
+        return
+    
+    name = data.get('name', '')
+    hex_key = data.get('hex', '')
+    
+    if not name or not hex_key:
+        return
+    
+    # Check if it's this player's turn
+    current_player = current_game.players[current_game.current_player_index]
+    if current_player.name != name:
+        emit('error', {'message': f'Only {current_player.name} can move the robber'})
+        return
+    
+    # Check if hex exists and is not ocean
+    if hex_key not in current_game.hexes:
+        emit('error', {'message': 'Invalid hex'})
+        return
+    
+    hex_obj = current_game.hexes[hex_key]
+    if hex_obj.type == 'ocean':
+        emit('error', {'message': 'Cannot place robber on ocean'})
+        return
+    
+    # Move robber
+    current_game.robber_hex = hex_key
+    current_game.must_move_robber = False
+    
+    print(f"Player {name} moved robber to {hex_key}")
+    
+    # Broadcast updated board
+    emit('board_updated', {
+        'board': current_game.get_board_data()
+    }, broadcast=True)
+
+
 @socketio.on('propose_trade')
 def handle_propose_trade(data):
     if current_game is None or current_game.game_state != "started":
+        return
+    
+    # Check if player must move robber first
+    if current_game.must_move_robber:
+        emit('error', {'message': 'You must move the robber first'})
         return
     
     name = data.get('name', '')

@@ -95,6 +95,10 @@ class Game:
         self.hex_radius = 2
         self.edge_radius = 3
         
+        # Robber
+        self.robber_hex = None  # Hex key where robber is located
+        self.must_move_robber = False  # Set to true when 7 is rolled
+        
         # Load building costs from JSON file
         costs_file = os.path.join(os.path.dirname(__file__), '..', 'data', 'costs.json')
         with open(costs_file, 'r') as f:
@@ -434,6 +438,10 @@ class Game:
             
             hex_obj = Hex(key, hex_type, number)
             self.hexes[key] = hex_obj
+            
+            # Place robber on desert tile
+            if hex_type == "desert" and self.robber_hex is None:
+                self.robber_hex = key
     
     def _generate_vertices_and_edges(self, hex_keys: set):
         """
@@ -616,7 +624,9 @@ class Game:
             },
             'game_phase': self.game_phase,
             'setup_action': self.setup_action,
-            'current_player': self.players[self._get_setup_player_index()].name if self.game_phase == "setup" else self.players[self.current_player_index].name
+            'current_player': self.players[self._get_setup_player_index()].name if self.game_phase == "setup" else self.players[self.current_player_index].name,
+            'robber_hex': self.robber_hex,
+            'must_move_robber': self.must_move_robber
         }
     
     def distribute_resources(self, dice_total: int):
@@ -653,8 +663,13 @@ class Game:
                     continue
                 
                 hex_obj = self.hexes[hex_key]
-                if hex_obj.number == dice_total and hex_obj.type not in ('desert', 'ocean'):
-                    # Try to take resource(s) from bank
+                # Skip robber hex and non-matching numbers
+                if hex_key == self.robber_hex:
+                    continue
+                if hex_obj.number != dice_total or hex_obj.type in ('desert', 'ocean'):
+                    continue
+                    
+                # Try to take resource(s) from bank
                     for _ in range(resource_amount):
                         if self.bank.take(hex_obj.type):
                             player.resources[hex_obj.type] = player.resources.get(hex_obj.type, 0) + 1

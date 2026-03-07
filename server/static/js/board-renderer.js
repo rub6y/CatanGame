@@ -312,6 +312,21 @@ function renderBoard(boardData, canvasId, highlightNumber = null) {
         drawHex(ctx, pos.x, pos.y, hexRadius - 2, getHexColor(hex.type), hex.number, isLand, isHighlighted);
     }
     
+    // Draw robber if present
+    if (boardData.robber_hex && hexPositions[boardData.robber_hex]) {
+        const robberPos = hexPositions[boardData.robber_hex];
+        const robberSize = 8;
+        // Draw in bottom-left corner of hex
+        const robberX = robberPos.x - hexRadius * 0.5;
+        const robberY = robberPos.y + hexRadius * 0.4;
+        
+        ctx.fillStyle = '#555555';
+        ctx.fillRect(robberX - robberSize/2, robberY - robberSize/2, robberSize, robberSize);
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(robberX - robberSize/2, robberY - robberSize/2, robberSize, robberSize);
+    }
+    
     // Calculate and store vertex positions (no drawing yet)
     const vertexPositions = {};
     for (const key in vertices) {
@@ -453,6 +468,35 @@ function findNearestVertex(clickX, clickY) {
 }
 
 /**
+ * Find the nearest hex to a click position.
+ * 
+ * @param {number} clickX - Click x position (relative to canvas origin)
+ * @param {number} clickY - Click y position
+ * @returns {string|null} - Hex key if found, null otherwise
+ */
+function findNearestHex(clickX, clickY) {
+    const { hexPositions, offsetX, offsetY } = boardPositions;
+    const hexRadius = BOARD_CONFIG.hexRadius;
+    const radius = hexRadius * 0.8;  // Slightly smaller than hex radius for accuracy
+    
+    let nearestKey = null;
+    let nearestDist = Infinity;
+    
+    for (const key in hexPositions) {
+        const pos = hexPositions[key];
+        
+        const dist = Math.sqrt(Math.pow(clickX - pos.x, 2) + Math.pow(clickY - pos.y, 2));
+        
+        if (dist < radius && dist < nearestDist) {
+            nearestDist = dist;
+            nearestKey = key;
+        }
+    }
+    
+    return nearestKey;
+}
+
+/**
  * Find the nearest edge to a click position.
  * 
  * @param {number} clickX - Click x position (relative to canvas origin)
@@ -495,7 +539,8 @@ function setupBoardRenderer() {
     return {
         render: renderBoard,
         findNearestVertex,
-        findNearestEdge
+        findNearestEdge,
+        findNearestHex
     };
 }
 
@@ -503,5 +548,6 @@ function setupBoardRenderer() {
 window.BoardRenderer = {
     render: renderBoard,
     findNearestVertex: findNearestVertex,
-    findNearestEdge: findNearestEdge
+    findNearestEdge: findNearestEdge,
+    findNearestHex: findNearestHex
 };

@@ -6,6 +6,7 @@ let currentRole = null;
 let gameStarted = false;
 let currentPlayer = null;
 let selectedBuilding = null;  // 'settlement', 'road', or null
+let mustMoveRobber = false;  // true when player must move robber after rolling 7
 let hasRolledDice = false;
 
 // DOM elements
@@ -185,6 +186,24 @@ upgradeCityBtn.addEventListener('click', () => {
  * Handle canvas click - place building at clicked position
  */
 document.getElementById('board-canvas').addEventListener('click', (event) => {
+    const canvas = event.target;
+    const rect = canvas.getBoundingClientRect();
+    const clickX = event.clientX - rect.left;
+    const clickY = event.clientY - rect.top;
+    
+    // Handle robber movement when mustMoveRobber is true
+    if (mustMoveRobber && currentUser === currentPlayer) {
+        const hexKey = window.BoardRenderer.findNearestHex(clickX, clickY);
+        if (hexKey) {
+            console.log('Moving robber to:', hexKey);
+            socket.emit('move_robber', {
+                name: currentUser,
+                hex: hexKey
+            });
+        }
+        return;
+    }
+    
     if (!selectedBuilding || currentUser !== currentPlayer) {
         return;
     }
@@ -415,6 +434,14 @@ function updateGameUI(boardData) {
     // Update currentPlayer variable from board data
     if (boardData.current_player) {
         currentPlayer = boardData.current_player;
+    }
+    
+    // Update mustMoveRobber flag
+    mustMoveRobber = boardData.must_move_robber || false;
+    
+    // If must move robber, show message and disable other actions
+    if (mustMoveRobber && currentUser === currentPlayer) {
+        alert('You rolled 7! You must move the robber. Click on a hex to place the robber.');
     }
     
     if (gamePhase === 'setup') {
