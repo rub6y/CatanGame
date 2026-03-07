@@ -186,13 +186,13 @@ upgradeCityBtn.addEventListener('click', () => {
  * Handle canvas click - place building at clicked position
  */
 document.getElementById('board-canvas').addEventListener('click', (event) => {
-    const canvas = event.target;
-    const rect = canvas.getBoundingClientRect();
-    const clickX = event.clientX - rect.left;
-    const clickY = event.clientY - rect.top;
-    
     // Handle robber movement when mustMoveRobber is true
     if (mustMoveRobber && currentUser === currentPlayer) {
+        const canvas = event.target;
+        const rect = canvas.getBoundingClientRect();
+        const clickX = event.clientX - rect.left;
+        const clickY = event.clientY - rect.top;
+        
         const hexKey = window.BoardRenderer.findNearestHex(clickX, clickY);
         if (hexKey) {
             console.log('Moving robber to:', hexKey);
