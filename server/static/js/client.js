@@ -954,6 +954,7 @@ socket.on('board_updated', (data) => {
     renderBank();
     renderTradeOffers();
     updateGameUI(data.board);
+    updateButtonColors();
     
     // Clear highlight after 2 seconds if there was one
     if (data.highlight) {
