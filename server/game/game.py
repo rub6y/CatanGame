@@ -87,6 +87,7 @@ class Game:
         self.setup_turn = 0  # 0-7 for 8 setup turns
         self.setup_action = "settlement"  # "settlement" or "road"
         self.last_setup_settlement = None  # vertex key of last placed settlement
+        self.player_settlements = {}  # player_name -> list of settlement vertex keys (for tracking first/second)
         
         # Board configuration
         # hex_radius=2 gives us 19 land hexes (standard Catan)
@@ -143,6 +144,12 @@ class Game:
         """Get list of player names (for compatibility)."""
         return [p.name for p in self.players]
     
+    def track_settlement(self, player_name: str, vertex_key: str):
+        """Track a settlement placement for starter resources."""
+        if player_name not in self.player_settlements:
+            self.player_settlements[player_name] = []
+        self.player_settlements[player_name].append(vertex_key)
+    
     def _get_setup_player_index(self) -> int:
         """Get player index based on setup turn order.
         
@@ -164,7 +171,15 @@ class Game:
         
         num_players = len(self.players)
         if self.setup_turn >= num_players * 2:
-            # Setup complete - switch to playing phase
+            # Setup complete - distribute starter resources from second settlements
+            print("=== Distributing starter resources from second settlements ===")
+            for player in self.players:
+                settlements = self.player_settlements.get(player.name, [])
+                if len(settlements) >= 2:
+                    # Second settlement is at index 1
+                    second_settlement = settlements[1]
+                    self.distribute_from_settlement(second_settlement, player.name)
+            
             self.game_phase = "playing"
             self.current_player_index = 0
             print(f"=== Setup complete! Starting normal play. ===")
@@ -654,6 +669,28 @@ class Game:
                 resource_str = ', '.join(f"+{count} {resource}" for resource, count in resources.items())
                 print(f"  {player_name}: {resource_str}")
             print(f"  Bank: {self.bank}")
+    
+    def distribute_from_settlement(self, vertex_key: str, player_name: str):
+        """Give resources from a specific settlement's adjacent hexes (for starter resources)."""
+        vertex = self.vertices.get(vertex_key)
+        if not vertex:
+            return
+        
+        player = self.get_player(player_name)
+        if not player:
+            return
+        
+        gained = {}
+        
+        for hex_key in vertex.neighbors.get('hexes', []):
+            hex_obj = self.hexes.get(hex_key)
+            if hex_obj and hex_obj.type not in ('desert', 'ocean'):
+                if self.bank.take(hex_obj.type):
+                    player.resources[hex_obj.type] = player.resources.get(hex_obj.type, 0) + 1
+                    gained[hex_obj.type] = gained.get(hex_obj.type, 0) + 1
+        
+        if gained:
+            print(f"Starter resources for {player_name} from {vertex_key}: {gained}")
     
     def get_cost(self, building_type: str) -> dict:
         """Get the cost for a building type."""

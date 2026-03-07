@@ -324,6 +324,9 @@ def handle_place_settlement(data):
         'player': name
     }
     
+    # Track settlement for starter resources
+    current_game.track_settlement(name, vertex_key)
+    
     print(f"Player {name} placed settlement at {vertex_key}")
     
     # Setup phase logic
