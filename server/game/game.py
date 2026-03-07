@@ -668,15 +668,15 @@ class Game:
                     continue
                 if hex_obj.number != dice_total or hex_obj.type in ('desert', 'ocean'):
                     continue
-                    
+                
                 # Try to take resource(s) from bank
-                    for _ in range(resource_amount):
-                        if self.bank.take(hex_obj.type):
-                            player.resources[hex_obj.type] = player.resources.get(hex_obj.type, 0) + 1
-                            
-                            if player_name not in gained_resources:
-                                gained_resources[player_name] = {}
-                            gained_resources[player_name][hex_obj.type] = gained_resources[player_name].get(hex_obj.type, 0) + 1
+                for _ in range(resource_amount):
+                    if self.bank.take(hex_obj.type):
+                        player.resources[hex_obj.type] = player.resources.get(hex_obj.type, 0) + 1
+                        
+                        if player_name not in gained_resources:
+                            gained_resources[player_name] = {}
+                        gained_resources[player_name][hex_obj.type] = gained_resources[player_name].get(hex_obj.type, 0) + 1
         
         if gained_resources:
             print(f"Resources distributed (rolled {dice_total}):")
