@@ -477,15 +477,18 @@ function findNearestVertex(clickX, clickY) {
 function findNearestHex(clickX, clickY) {
     const { hexPositions, offsetX, offsetY } = boardPositions;
     const hexRadius = BOARD_CONFIG.hexRadius;
-    const radius = hexRadius * 0.8;  // Slightly smaller than hex radius for accuracy
+    const radius = hexRadius * 0.8;
     
     let nearestKey = null;
     let nearestDist = Infinity;
     
     for (const key in hexPositions) {
         const pos = hexPositions[key];
+        // Adjust for canvas offset
+        const adjX = pos.x + offsetX;
+        const adjY = pos.y + offsetY;
         
-        const dist = Math.sqrt(Math.pow(clickX - pos.x, 2) + Math.pow(clickY - pos.y, 2));
+        const dist = Math.sqrt(Math.pow(clickX - adjX, 2) + Math.pow(clickY - adjY, 2));
         
         if (dist < radius && dist < nearestDist) {
             nearestDist = dist;
