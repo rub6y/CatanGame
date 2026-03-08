@@ -47,9 +47,25 @@ const closeTradeModal = document.getElementById('close-trade-modal');
 const submitTradeBtn = document.getElementById('submit-trade-btn');
 const diceTimerEl = document.getElementById('dice-timer');
 const roundTimerEl = document.getElementById('round-timer');
+const testSoundBtn = document.getElementById('test-sound-btn');
 
-// Turn sound
+// Turn sound - preload
 const turnSound = new Audio('/audio/turn.wav');
+turnSound.preload = 'auto';
+
+// Test sound button handler
+if (testSoundBtn) {
+    testSoundBtn.addEventListener('click', () => {
+        turnSound.currentTime = 0;
+        turnSound.play().catch(e => alert('Could not play sound: ' + e.message));
+    });
+}
+
+// Timer tracking
+let lastDiceTime = 15;
+let lastRoundTime = 120;
+let lastUpdateTime = Date.now();
+let diceTimerInterval = null;
 
 // Store current board data for click handling
 let currentBoardData = null;
@@ -836,8 +852,9 @@ function updateButtonColors() {
 function updateTimers(boardData) {
     if (!boardData || !diceTimerEl || !roundTimerEl) return;
     
-    const diceTime = boardData.dice_roll_time || 15;
-    const roundTime = boardData.round_time || 120;
+    lastDiceTime = boardData.dice_roll_time || 15;
+    lastRoundTime = boardData.round_time || 120;
+    lastUpdateTime = Date.now();
     const hasRolled = boardData.has_rolled_dice;
     
     // Dice timer - only show if hasn't rolled yet
@@ -845,13 +862,47 @@ function updateTimers(boardData) {
         diceTimerEl.textContent = 'Dice: -';
         diceTimerEl.className = 'timer';
     } else {
-        diceTimerEl.textContent = `Dice: ${diceTime}s`;
-        diceTimerEl.className = 'timer' + (diceTime <= 5 ? ' danger' : diceTime <= 10 ? ' warning' : '');
+        diceTimerEl.textContent = `Dice: ${lastDiceTime}s`;
+        diceTimerEl.className = 'timer' + (lastDiceTime <= 5 ? ' danger' : lastDiceTime <= 10 ? ' warning' : '');
     }
     
     // Round timer
-    roundTimerEl.textContent = `Round: ${roundTime}s`;
-    roundTimerEl.className = 'timer' + (roundTime <= 30 ? ' danger' : roundTime <= 60 ? ' warning' : '');
+    roundTimerEl.textContent = `Round: ${lastRoundTime}s`;
+    roundTimerEl.className = 'timer' + (lastRoundTime <= 30 ? ' danger' : lastRoundTime <= 60 ? ' warning' : '');
+    
+    // Start timer interval if it's player's turn
+    startTimerInterval();
+}
+
+function startTimerInterval() {
+    if (diceTimerInterval) clearInterval(diceTimerInterval);
+    
+    diceTimerInterval = setInterval(() => {
+        if (!gameStarted || currentPlayer !== currentUser) {
+            clearInterval(diceTimerInterval);
+            return;
+        }
+        
+        const elapsed = Math.floor((Date.now() - lastUpdateTime) / 1000);
+        
+        // Calculate current times
+        const currentDiceTime = Math.max(0, lastDiceTime - elapsed);
+        const currentRoundTime = Math.max(0, lastRoundTime - elapsed);
+        const hasRolled = currentBoardData?.has_rolled_dice;
+        
+        // Update dice timer
+        if (hasRolled) {
+            diceTimerEl.textContent = 'Dice: -';
+            diceTimerEl.className = 'timer';
+        } else {
+            diceTimerEl.textContent = `Dice: ${currentDiceTime}s`;
+            diceTimerEl.className = 'timer' + (currentDiceTime <= 5 ? ' danger' : currentDiceTime <= 10 ? ' warning' : '');
+        }
+        
+        // Update round timer
+        roundTimerEl.textContent = `Round: ${currentRoundTime}s`;
+        roundTimerEl.className = 'timer' + (currentRoundTime <= 30 ? ' danger' : currentRoundTime <= 60 ? ' warning' : '');
+    }, 1000);
 }
 
 // Socket event handlers
@@ -951,6 +1002,16 @@ socket.on('turn_changed', (data) => {
     renderResourcePanel();
     console.log('Turn changed. Current player:', data.current_player);
     hasRolledDice = false;
+    
+    // Update timers from server data
+    if (data.dice_roll_time !== undefined) {
+        lastDiceTime = data.dice_roll_time;
+        lastRoundTime = data.round_time;
+        lastUpdateTime = Date.now();
+        currentBoardData = currentBoardData || {};
+        currentBoardData.has_rolled_dice = data.has_rolled_dice;
+        startTimerInterval();
+    }
     
     // Play sound if it's now my turn
     if (currentPlayer === currentUser && !wasMyTurn) {

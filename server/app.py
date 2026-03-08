@@ -194,7 +194,10 @@ def handle_next_turn(data):
     emit('turn_changed', {
         'players': current_game.get_player_names(),
         'observers': current_game.observers,
-        'current_player': new_current_player_name
+        'current_player': new_current_player_name,
+        'dice_roll_time': current_game.get_dice_roll_time_remaining(),
+        'round_time': current_game.get_round_time_remaining(),
+        'has_rolled_dice': current_game.has_rolled_dice
     }, broadcast=True)
 
 
