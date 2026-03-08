@@ -1,1 +1,1 @@
-{"users": [{"name": "G", "role": "observer"}, {"name": "F", "role": "observer"}, {"name": "XD", "role": "observer"}, {"name": "A", "role": "player"}, {"name": "B", "role": "player"}, {"name": "C", "role": "player"}, {"name": "D", "role": "player"}]}
+{"users": [{"name": "G", "role": "observer"}, {"name": "F", "role": "observer"}, {"name": "XD", "role": "observer"}, {"name": "A", "role": "player", "color": "#99c1f1"}, {"name": "B", "role": "player", "color": "#8ff0a4"}, {"name": "C", "role": "player", "color": "#f9f06b"}, {"name": "D", "role": "player", "color": "#f66151"}]}

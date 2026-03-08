@@ -99,6 +99,12 @@ class Game:
         self.robber_hex = None  # Hex key where robber is located
         self.must_move_robber = False  # Set to true when 7 is rolled
         
+        # Timer settings (in seconds)
+        self.dice_roll_time_limit = 15
+        self.round_time_limit = 120
+        self.turn_start_time = None  # timestamp when turn started
+        self.has_rolled_dice = False  # whether player has rolled in current turn
+        
         # Load building costs from JSON file
         costs_file = os.path.join(os.path.dirname(__file__), '..', 'data', 'costs.json')
         with open(costs_file, 'r') as f:
@@ -626,7 +632,10 @@ class Game:
             'setup_action': self.setup_action,
             'current_player': self.players[self._get_setup_player_index()].name if self.game_phase == "setup" else self.players[self.current_player_index].name,
             'robber_hex': self.robber_hex,
-            'must_move_robber': self.must_move_robber
+            'must_move_robber': self.must_move_robber,
+            'dice_roll_time': self.get_dice_roll_time_remaining(),
+            'round_time': self.get_round_time_remaining(),
+            'has_rolled_dice': self.has_rolled_dice
         }
     
     def distribute_resources(self, dice_total: int):
@@ -742,7 +751,45 @@ class Game:
         """Start the game and shuffle player order."""
         random.shuffle(self.players)
         self.game_state = "started"
+        self.start_turn()
         print(f"\n=== Game started! ===")
         print(f"Player order: {self.players}")
         print(f"Current player: {self.players[self.current_player_index]}")
         print("=====================\n")
+    
+    def start_turn(self):
+        """Start a new turn and reset timers."""
+        import time
+        self.turn_start_time = time.time()
+        self.has_rolled_dice = False
+    
+    def get_dice_roll_time_remaining(self) -> int:
+        """Get seconds remaining for dice roll."""
+        import time
+        if self.turn_start_time is None or self.has_rolled_dice:
+            return self.dice_roll_time_limit
+        elapsed = time.time() - self.turn_start_time
+        return max(0, self.dice_roll_time_limit - int(elapsed))
+    
+    def get_round_time_remaining(self) -> int:
+        """Get seconds remaining for round."""
+        import time
+        if self.turn_start_time is None:
+            return self.round_time_limit
+        elapsed = time.time() - self.turn_start_time
+        return max(0, self.round_time_limit - int(elapsed))
+    
+    def is_dice_roll_expired(self) -> bool:
+        """Check if dice roll time has expired."""
+        if self.has_rolled_dice:
+            return False
+        return self.get_dice_roll_time_remaining() <= 0
+    
+    def is_round_expired(self) -> bool:
+        """Check if round time has expired."""
+        return self.get_round_time_remaining() <= 0
+    
+    def set_dice_rolled(self):
+        """Mark that dice has been rolled."""
+        self.has_rolled_dice = True
+

@@ -227,6 +227,28 @@ button:hover {
     font-weight: bold;
 }
 
+.timer-container {
+    display: flex;
+    gap: 1rem;
+}
+
+.timer {
+    background-color: #27ae60;
+    color: #fff;
+    padding: 0.4rem 0.8rem;
+    border-radius: 5px;
+    font-weight: bold;
+    font-size: 0.85rem;
+}
+
+.timer.warning {
+    background-color: #f39c12;
+}
+
+.timer.danger {
+    background-color: #e74c3c;
+}
+
 #color-picker {
     width: 50px;
     height: 40px;

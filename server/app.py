@@ -174,13 +174,21 @@ def handle_next_turn(data):
     current_player_name = current_player.name if current_player else None
     requester = data.get('name')
 
-    if requester != current_player_name:
+    # Check if round time expired - auto advance
+    if current_game.is_round_expired():
+        print(f"Round time expired - auto-advancing turn")
+    
+    if requester != current_player_name and not current_game.is_round_expired():
         emit('error', {'message': f'Only {current_player_name} can advance the turn'})
         return
 
     current_game.current_player_index = (current_game.current_player_index + 1) % len(current_game.players)
     new_current_player = current_game.players[current_game.current_player_index]
     new_current_player_name = new_current_player.name if new_current_player else None
+    
+    # Reset turn timer
+    current_game.start_turn()
+    
     print(f"Turn changed. Current player: {new_current_player_name}")
 
     emit('turn_changed', {
@@ -236,10 +244,17 @@ def handle_roll_dice(data):
         emit('error', {'message': f'Only {current_player.name} can roll dice'})
         return
     
+    # Check if dice roll time expired - auto-roll
+    if current_game.is_dice_roll_expired():
+        print(f"Dice roll time expired for {name} - auto-rolling")
+    
     import random
     dice1 = random.randint(1, 6)
     dice2 = random.randint(1, 6)
     total = dice1 + dice2
+    
+    # Mark dice as rolled
+    current_game.set_dice_rolled()
     
     print(f"Player {name} rolled {dice1} + {dice2} = {total}")
     

@@ -45,6 +45,11 @@ const myOffersDiv = document.getElementById('my-offers');
 const tradeModal = document.getElementById('trade-modal');
 const closeTradeModal = document.getElementById('close-trade-modal');
 const submitTradeBtn = document.getElementById('submit-trade-btn');
+const diceTimerEl = document.getElementById('dice-timer');
+const roundTimerEl = document.getElementById('round-timer');
+
+// Turn sound
+const turnSound = new Audio('/audio/turn.wav');
 
 // Store current board data for click handling
 let currentBoardData = null;
@@ -825,6 +830,30 @@ function updateButtonColors() {
     }
 }
 
+/**
+ * Update timer displays based on board data
+ */
+function updateTimers(boardData) {
+    if (!boardData || !diceTimerEl || !roundTimerEl) return;
+    
+    const diceTime = boardData.dice_roll_time || 15;
+    const roundTime = boardData.round_time || 120;
+    const hasRolled = boardData.has_rolled_dice;
+    
+    // Dice timer - only show if hasn't rolled yet
+    if (hasRolled) {
+        diceTimerEl.textContent = 'Dice: -';
+        diceTimerEl.className = 'timer';
+    } else {
+        diceTimerEl.textContent = `Dice: ${diceTime}s`;
+        diceTimerEl.className = 'timer' + (diceTime <= 5 ? ' danger' : diceTime <= 10 ? ' warning' : '');
+    }
+    
+    // Round timer
+    roundTimerEl.textContent = `Round: ${roundTime}s`;
+    roundTimerEl.className = 'timer' + (roundTime <= 30 ? ' danger' : roundTime <= 60 ? ' warning' : '');
+}
+
 // Socket event handlers
 
 socket.on('user_list', (data) => {
@@ -866,6 +895,9 @@ socket.on('game_started', (data) => {
     
     // Update button colors
     updateButtonColors();
+    
+    // Update timers
+    updateTimers(data.board);
     
     // Enable dice button for the first player
     if (currentPlayer === currentUser) {
@@ -912,12 +944,18 @@ socket.on('game_state', (data) => {
 });
 
 socket.on('turn_changed', (data) => {
+    const wasMyTurn = currentPlayer === currentUser;
     currentPlayer = data.current_player;
     renderGameSidebar({ players: data.players, observers: data.observers });
     updateConsoleVisibility();
     renderResourcePanel();
     console.log('Turn changed. Current player:', data.current_player);
     hasRolledDice = false;
+    
+    // Play sound if it's now my turn
+    if (currentPlayer === currentUser && !wasMyTurn) {
+        turnSound.play().catch(e => console.log('Could not play sound:', e));
+    }
     
     // Enable dice button for the current player
     if (currentPlayer === currentUser) {
@@ -982,6 +1020,7 @@ socket.on('board_updated', (data) => {
     renderTradeOffers();
     updateGameUI(data.board);
     updateButtonColors();
+    updateTimers(data.board);
     
     // Clear highlight after 2 seconds if there was one
     if (data.highlight) {
