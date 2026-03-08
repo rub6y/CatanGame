@@ -252,14 +252,6 @@ button:hover {
     background-color: #e74c3c;
 }
 
-.test-sound-btn {
-    background: none;
-    border: none;
-    font-size: 1rem;
-    cursor: pointer;
-    padding: 0.2rem;
-}
-
 #color-picker {
     width: 40px;
     height: 35px;

@@ -103,6 +103,7 @@ class Game:
         self.dice_roll_time_limit = 15
         self.round_time_limit = 120
         self.turn_start_time = None  # timestamp when turn started
+        self.dice_rolled_time = None  # timestamp when dice was rolled
         self.has_rolled_dice = False  # whether player has rolled in current turn
         
         # Load building costs from JSON file
@@ -761,6 +762,7 @@ class Game:
         """Start a new turn and reset timers."""
         import time
         self.turn_start_time = time.time()
+        self.dice_rolled_time = None
         self.has_rolled_dice = False
     
     def get_dice_roll_time_remaining(self) -> int:
@@ -772,11 +774,17 @@ class Game:
         return max(0, self.dice_roll_time_limit - int(elapsed))
     
     def get_round_time_remaining(self) -> int:
-        """Get seconds remaining for round."""
+        """Get seconds remaining for round (starts after dice roll)."""
         import time
         if self.turn_start_time is None:
             return self.round_time_limit
-        elapsed = time.time() - self.turn_start_time
+        # If dice not rolled yet, return full time (will be shown as "-")
+        if not self.has_rolled_dice:
+            return self.round_time_limit
+        # Calculate from dice roll time
+        if self.dice_rolled_time is None:
+            return self.round_time_limit
+        elapsed = time.time() - self.dice_rolled_time
         return max(0, self.round_time_limit - int(elapsed))
     
     def is_dice_roll_expired(self) -> bool:
@@ -791,5 +799,7 @@ class Game:
     
     def set_dice_rolled(self):
         """Mark that dice has been rolled."""
+        import time
         self.has_rolled_dice = True
+        self.dice_rolled_time = time.time()
 

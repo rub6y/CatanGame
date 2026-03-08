@@ -47,19 +47,10 @@ const closeTradeModal = document.getElementById('close-trade-modal');
 const submitTradeBtn = document.getElementById('submit-trade-btn');
 const diceTimerEl = document.getElementById('dice-timer');
 const roundTimerEl = document.getElementById('round-timer');
-const testSoundBtn = document.getElementById('test-sound-btn');
 
 // Turn sound - preload
-const turnSound = new Audio('/audio/turn.wav');
+const turnSound = new Audio('/static/audio/turn.wav');
 turnSound.preload = 'auto';
-
-// Test sound button handler
-if (testSoundBtn) {
-    testSoundBtn.addEventListener('click', () => {
-        turnSound.currentTime = 0;
-        turnSound.play().catch(e => alert('Could not play sound: ' + e.message));
-    });
-}
 
 // Timer tracking
 let lastDiceTime = 15;
@@ -852,6 +843,14 @@ function updateButtonColors() {
 function updateTimers(boardData) {
     if (!boardData || !diceTimerEl || !roundTimerEl) return;
     
+    // Only show timers in playing phase
+    if (boardData.game_phase === 'setup') {
+        diceTimerEl.textContent = 'Dice: -';
+        roundTimerEl.textContent = 'Round: -';
+        if (diceTimerInterval) clearInterval(diceTimerInterval);
+        return;
+    }
+    
     lastDiceTime = boardData.dice_roll_time || 15;
     lastRoundTime = boardData.round_time || 120;
     lastUpdateTime = Date.now();
@@ -866,19 +865,28 @@ function updateTimers(boardData) {
         diceTimerEl.className = 'timer' + (lastDiceTime <= 5 ? ' danger' : lastDiceTime <= 10 ? ' warning' : '');
     }
     
-    // Round timer
-    roundTimerEl.textContent = `Round: ${lastRoundTime}s`;
-    roundTimerEl.className = 'timer' + (lastRoundTime <= 30 ? ' danger' : lastRoundTime <= 60 ? ' warning' : '');
+    // Round timer - only show after dice rolled
+    if (hasRolled) {
+        roundTimerEl.textContent = `Round: ${lastRoundTime}s`;
+        roundTimerEl.className = 'timer' + (lastRoundTime <= 30 ? ' danger' : lastRoundTime <= 60 ? ' warning' : '');
+    } else {
+        roundTimerEl.textContent = 'Round: -';
+        roundTimerEl.className = 'timer';
+    }
     
-    // Start timer interval if it's player's turn
-    startTimerInterval();
+    // Start timer interval if it's player's turn and playing phase
+    if (boardData.game_phase === 'playing' && currentPlayer === currentUser) {
+        startTimerInterval();
+    } else {
+        if (diceTimerInterval) clearInterval(diceTimerInterval);
+    }
 }
 
 function startTimerInterval() {
     if (diceTimerInterval) clearInterval(diceTimerInterval);
     
     diceTimerInterval = setInterval(() => {
-        if (!gameStarted || currentPlayer !== currentUser) {
+        if (!gameStarted || currentPlayer !== currentUser || currentBoardData?.game_phase === 'setup') {
             clearInterval(diceTimerInterval);
             return;
         }
@@ -890,7 +898,24 @@ function startTimerInterval() {
         const currentRoundTime = Math.max(0, lastRoundTime - elapsed);
         const hasRolled = currentBoardData?.has_rolled_dice;
         
-        // Update dice timer
+        // Check if dice timer expired - auto roll
+        if (!hasRolled && currentDiceTime <= 0) {
+            console.log('Dice timer expired - auto rolling');
+            socket.emit('roll_dice', { name: currentUser });
+            lastDiceTime = 15;
+            lastUpdateTime = Date.now();
+            return;
+        }
+        
+        // Check if round timer expired - auto skip turn
+        if (hasRolled && currentRoundTime <= 0) {
+            console.log('Round timer expired - auto advancing');
+            socket.emit('next_turn', { name: currentUser });
+            clearInterval(diceTimerInterval);
+            return;
+        }
+        
+        // Update dice timer display
         if (hasRolled) {
             diceTimerEl.textContent = 'Dice: -';
             diceTimerEl.className = 'timer';
@@ -899,9 +924,14 @@ function startTimerInterval() {
             diceTimerEl.className = 'timer' + (currentDiceTime <= 5 ? ' danger' : currentDiceTime <= 10 ? ' warning' : '');
         }
         
-        // Update round timer
-        roundTimerEl.textContent = `Round: ${currentRoundTime}s`;
-        roundTimerEl.className = 'timer' + (currentRoundTime <= 30 ? ' danger' : currentRoundTime <= 60 ? ' warning' : '');
+        // Update round timer display (only after dice rolled)
+        if (hasRolled) {
+            roundTimerEl.textContent = `Round: ${currentRoundTime}s`;
+            roundTimerEl.className = 'timer' + (currentRoundTime <= 30 ? ' danger' : currentRoundTime <= 60 ? ' warning' : '');
+        } else {
+            roundTimerEl.textContent = 'Round: -';
+            roundTimerEl.className = 'timer';
+        }
     }, 1000);
 }
 
