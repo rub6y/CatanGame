@@ -128,6 +128,31 @@
         </div>
     </div>
 
+    <!-- Discard Modal -->
+    <div id="discard-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Discard Resources</h2>
+            <p>You must discard <span id="discard-amount">0</span> cards to the bank.</p>
+            <div class="resource-selector">
+                <label>🌲 Wood: <input type="number" id="discard-wood" min="0" max="10" value="0"></label>
+                <label>🧱 Brick: <input type="number" id="discard-brick" min="0" max="10" value="0"></label>
+                <label>🐑 Sheep: <input type="number" id="discard-sheep" min="0" max="10" value="0"></label>
+                <label>🌾 Wheat: <input type="number" id="discard-wheat" min="0" max="10" value="0"></label>
+                <label>🪨 Ore: <input type="number" id="discard-ore" min="0" max="10" value="0"></label>
+            </div>
+            <button id="submit-discard-btn">Discard</button>
+        </div>
+    </div>
+
+    <!-- Victim Selection Modal -->
+    <div id="victim-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Choose Victim</h2>
+            <p>Select a player to steal a resource from:</p>
+            <div id="victim-list" class="victim-list"></div>
+        </div>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
     <script src="{{ url_for('static', filename='js/board-renderer.js') }}"></script>
     <script src="{{ url_for('static', filename='js/client.js') }}"></script>

@@ -565,12 +565,12 @@ button:hover {
     width: 100%;
     height: 100%;
     background-color: rgba(0, 0, 0, 0.7);
+    justify-content: center;
+    align-items: center;
 }
 
 .modal.show {
     display: flex;
-    justify-content: center;
-    align-items: center;
 }
 
 .modal-content {
@@ -612,6 +612,37 @@ button:hover {
 
 .resource-selector label {
     display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.victim-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    margin: 1rem 0;
+}
+
+.victim-item {
+    display: flex;
+    align-items: center;
+    padding: 0.8rem;
+    background-color: #34495e;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.victim-item:hover {
+    background-color: #3d566e;
+}
+
+.victim-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    margin-right: 0.8rem;
+}
     justify-content: space-between;
     align-items: center;
     padding: 0.3rem;
@@ -673,4 +704,8 @@ button:hover {
 
 .hidden {
     display: none !important;
+}
+
+.modal.show {
+    display: flex !important;
 }

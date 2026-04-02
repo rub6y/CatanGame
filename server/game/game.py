@@ -98,6 +98,11 @@ class Game:
         # Robber
         self.robber_hex = None  # Hex key where robber is located
         self.must_move_robber = False  # Set to true when 7 is rolled
+        self.must_choose_victim = False  # Set to true when need to pick victim
+        self.robber_victims = []  # List of players with settlements near robber hex
+        
+        # Discard half mechanic
+        self.players_needing_discard = {}  # player_name -> amount to discard
         
         # Timer settings (in seconds)
         self.dice_roll_time_limit = 15
@@ -634,6 +639,9 @@ class Game:
             'current_player': self.players[self._get_setup_player_index()].name if self.game_phase == "setup" else self.players[self.current_player_index].name,
             'robber_hex': self.robber_hex,
             'must_move_robber': self.must_move_robber,
+            'must_choose_victim': self.must_choose_victim,
+            'robber_victims': self.robber_victims,
+            'players_needing_discard': self.players_needing_discard,
             'dice_roll_time': self.get_dice_roll_time_remaining(),
             'round_time': self.get_round_time_remaining(),
             'has_rolled_dice': self.has_rolled_dice
@@ -716,6 +724,130 @@ class Game:
         
         if gained:
             print(f"Starter resources for {player_name} from {vertex_key}: {gained}")
+    
+    def check_discard_required(self):
+        """Check which players need to discard half their resources (7 rolled)."""
+        self.players_needing_discard = {}
+        
+        for player in self.players:
+            total_cards = sum(player.resources.values())
+            if total_cards > 7:
+                discard_amount = total_cards // 2
+                self.players_needing_discard[player.name] = discard_amount
+        
+        if self.players_needing_discard:
+            print(f"Players needing to discard: {self.players_needing_discard}")
+    
+    def discard_resources(self, player_name: str, resources: dict) -> bool:
+        """Process resource discard from a player.
+        
+        Args:
+            player_name: Name of player discarding
+            resources: Dict of resource_type -> count to discard
+            
+        Returns:
+            bool: True if discard was successful
+        """
+        if player_name not in self.players_needing_discard:
+            return False
+        
+        player = self.get_player(player_name)
+        if not player:
+            return False
+        
+        required = self.players_needing_discard[player_name]
+        discard_total = sum(resources.values())
+        
+        if discard_total != required:
+            return False
+        
+        for resource_type, count in resources.items():
+            current = player.resources.get(resource_type, 0)
+            if current < count:
+                return False
+        
+        for resource_type, count in resources.items():
+            player.resources[resource_type] = player.resources.get(resource_type, 0) - count
+            self.bank.return_resources(resource_type, count)
+        
+        del self.players_needing_discard[player_name]
+        print(f"Player {player_name} discarded {resources}")
+        return True
+    
+    def get_robber_victims(self) -> list:
+        """Get list of players with settlements/cities adjacent to robber hex.
+        
+        Returns:
+            list: List of player names who can be stolen from
+        """
+        if not self.robber_hex or self.robber_hex not in self.hexes:
+            return []
+        
+        victim_names = set()
+        
+        for vertex_key, vertex in self.vertices.items():
+            if not vertex.building:
+                continue
+            if vertex.building.get('type') not in ('settlement', 'city'):
+                continue
+            
+            if self.robber_hex in vertex.neighbors.get('hexes', []):
+                player_name = vertex.building.get('player')
+                if player_name:
+                    victim_names.add(player_name)
+        
+        return list(victim_names)
+    
+    def steal_resource(self, victim_name: str, thief_name: str, resource_type: str = None) -> str | None:
+        """Steal a random resource from a victim and give to thief.
+        
+        Args:
+            victim_name: Name of player to steal from
+            thief_name: Name of player to receive stolen resource
+            resource_type: If provided, steal this specific type (for UI choice)
+            
+        Returns:
+            str: Resource type stolen, or None if no resources to steal
+        """
+        victim = self.get_player(victim_name)
+        if not victim:
+            return None
+        
+        thief = self.get_player(thief_name)
+        if not thief:
+            return None
+        
+        available_resources = [r for r, count in victim.resources.items() if count > 0]
+        if not available_resources:
+            return None
+        
+        if resource_type and resource_type in available_resources:
+            stolen = resource_type
+        else:
+            stolen = random.choice(available_resources)
+        
+        victim.resources[stolen] = victim.resources[stolen] - 1
+        thief.resources[stolen] = thief.resources.get(stolen, 0) + 1
+        return stolen
+    
+    def give_resource(self, player_name: str, resource_type: str) -> bool:
+        """Give a resource to a player.
+        
+        Args:
+            player_name: Name of player to receive resource
+            resource_type: Resource type to give
+            
+        Returns:
+            bool: True if resource was given
+        """
+        player = self.get_player(player_name)
+        if not player:
+            return False
+        
+        if self.bank.take(resource_type):
+            player.resources[resource_type] = player.resources.get(resource_type, 0) + 1
+            return True
+        return False
     
     def get_cost(self, building_type: str) -> dict:
         """Get the cost for a building type."""

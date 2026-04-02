@@ -165,6 +165,17 @@ def handle_next_turn(data):
         emit('error', {'message': 'You must move the robber first'})
         return
     
+    # Check if player must choose victim first
+    if current_game.must_choose_victim:
+        emit('error', {'message': 'You must choose a victim to steal from'})
+        return
+    
+    # Check if player must discard first
+    requester = data.get('name')
+    if requester in current_game.players_needing_discard:
+        emit('error', {'message': 'You must discard resources first'})
+        return
+    
     # Don't allow manual turn advancement during setup phase
     if current_game.game_phase == "setup":
         emit('error', {'message': 'Cannot skip turn during setup phase'})
@@ -172,7 +183,6 @@ def handle_next_turn(data):
 
     current_player = current_game.players[current_game.current_player_index]
     current_player_name = current_player.name if current_player else None
-    requester = data.get('name')
 
     # Check if round time expired - auto advance
     if current_game.is_round_expired():
@@ -264,9 +274,18 @@ def handle_roll_dice(data):
     # Set must_move_robber if 7 is rolled (resources not distributed)
     if total == 7:
         current_game.must_move_robber = True
+        current_game.check_discard_required()
         current_game.distribute_resources(total)  # This will skip distribution
     else:
         current_game.distribute_resources(total)
+    
+    # Emit discard required for players with >7 cards (broadcast to all, client filters)
+    if current_game.players_needing_discard:
+        for player_name, amount in current_game.players_needing_discard.items():
+            emit('discard_required', {
+                'player': player_name,
+                'amount': amount
+            }, broadcast=True)
     
     emit('dice_rolled', {
         'player': name,
@@ -590,7 +609,99 @@ def handle_move_robber(data):
     
     print(f"Player {name} moved robber to {hex_key}")
     
+    # Check for victims adjacent to new robber position
+    victims = current_game.get_robber_victims()
+    print(f"Victims found near robber hex {hex_key}: {victims}")
+    
+    # Exclude current player from victims (can't rob yourself)
+    if name in victims:
+        victims.remove(name)
+    
+    print(f"Victims after removing self: {victims}")
+    
+    current_player = current_game.players[current_game.current_player_index]
+    
+    if victims:
+        current_game.must_choose_victim = True
+        current_game.robber_victims = victims
+        emit('choose_victim', {
+            'victims': victims
+        }, broadcast=True)
+    
     # Broadcast updated board
+    emit('board_updated', {
+        'board': current_game.get_board_data()
+    }, broadcast=True)
+
+
+@socketio.on('discard_resources')
+def handle_discard_resources(data):
+    if current_game is None or current_game.game_state != "started":
+        return
+    
+    name = data.get('name', '')
+    resources = data.get('resources', {})
+    
+    if not name or not resources:
+        emit('error', {'message': 'Invalid discard request'})
+        return
+    
+    if name not in current_game.players_needing_discard:
+        emit('error', {'message': 'You do not need to discard'})
+        return
+    
+    success = current_game.discard_resources(name, resources)
+    
+    if not success:
+        emit('error', {'message': 'Invalid discard amount or resources'})
+        return
+    
+    emit('discard_completed', {
+        'player': name
+    }, broadcast=True)
+    
+    emit('board_updated', {
+        'board': current_game.get_board_data()
+    }, broadcast=True)
+
+
+@socketio.on('choose_robber_victim')
+def handle_choose_robber_victim(data):
+    if current_game is None or current_game.game_state != "started":
+        return
+    
+    if not current_game.must_choose_victim:
+        emit('error', {'message': 'No victim selection required'})
+        return
+    
+    name = data.get('name', '')
+    victim_name = data.get('victim', '')
+    
+    if not name or not victim_name:
+        return
+    
+    current_player = current_game.players[current_game.current_player_index]
+    if current_player.name != name:
+        emit('error', {'message': f'Only {current_player.name} can choose victim'})
+        return
+    
+    if victim_name not in current_game.robber_victims:
+        emit('error', {'message': 'Invalid victim selection'})
+        return
+    
+    stolen = current_game.steal_resource(victim_name, name)
+    
+    current_game.must_choose_victim = False
+    current_game.robber_victims = []
+    
+    if stolen:
+        print(f"Player {name} stole 1 {stolen} from {victim_name}")
+        emit('resource_stolen', {
+            'player': name,
+            'victim': victim_name,
+            'resource': stolen
+        }, broadcast=True)
+    
     emit('board_updated', {
         'board': current_game.get_board_data()
     }, broadcast=True)

@@ -48,6 +48,13 @@ const submitTradeBtn = document.getElementById('submit-trade-btn');
 const diceTimerEl = document.getElementById('dice-timer');
 const roundTimerEl = document.getElementById('round-timer');
 
+// Discard and victim modal elements
+const discardModal = document.getElementById('discard-modal');
+const victimModal = document.getElementById('victim-modal');
+const victimList = document.getElementById('victim-list');
+const submitDiscardBtn = document.getElementById('submit-discard-btn');
+const discardAmountSpan = document.getElementById('discard-amount');
+
 // Turn sound - preload
 const turnSound = new Audio('/static/audio/turn.wav');
 turnSound.preload = 'auto';
@@ -60,6 +67,12 @@ let diceTimerInterval = null;
 
 // Store current board data for click handling
 let currentBoardData = null;
+
+// Discard and victim selection state
+let mustDiscard = false;
+let discardAmount = 0;
+let mustChooseVictim = false;
+let robberVictims = [];
 
 /**
  * Handle join button click - connect to game
@@ -450,6 +463,30 @@ function updateGameUI(boardData) {
     
     // Update mustMoveRobber flag
     mustMoveRobber = boardData.must_move_robber || false;
+    mustChooseVictim = boardData.must_choose_victim || false;
+    robberVictims = boardData.robber_victims || [];
+    
+    // Handle victim modal from board data
+    if (mustChooseVictim && currentUser === currentPlayer) {
+        renderVictimList();
+        victimModal.classList.add('show');
+    }
+    
+    // Update discard state from board data
+    const playersNeedingDiscard = boardData.players_needing_discard || {};
+    if (playersNeedingDiscard[currentUser] !== undefined && !mustDiscard) {
+        mustDiscard = true;
+        discardAmount = playersNeedingDiscard[currentUser];
+        discardAmountSpan.textContent = discardAmount;
+        
+        document.getElementById('discard-wood').value = 0;
+        document.getElementById('discard-brick').value = 0;
+        document.getElementById('discard-sheep').value = 0;
+        document.getElementById('discard-wheat').value = 0;
+        document.getElementById('discard-ore').value = 0;
+        
+        discardModal.classList.add('show');
+    }
     
     // If must move robber, show message and disable other actions
     if (mustMoveRobber && currentUser === currentPlayer) {
@@ -1147,6 +1184,99 @@ socket.on('trade_cancelled', (data) => {
 socket.on('trade_completed', (data) => {
     console.log('Trade completed:', data);
     renderTradeOffers();
+});
+
+socket.on('discard_required', (data) => {
+    console.log('Discard required:', data);
+    if (data.player === currentUser) {
+        mustDiscard = true;
+        discardAmount = data.amount;
+        discardAmountSpan.textContent = discardAmount;
+        
+        // Reset discard inputs
+        document.getElementById('discard-wood').value = 0;
+        document.getElementById('discard-brick').value = 0;
+        document.getElementById('discard-sheep').value = 0;
+        document.getElementById('discard-wheat').value = 0;
+        document.getElementById('discard-ore').value = 0;
+        
+        discardModal.classList.add('show');
+    }
+});
+
+socket.on('discard_completed', (data) => {
+    console.log('Discard completed:', data);
+    if (data.player === currentUser) {
+        mustDiscard = false;
+        discardAmount = 0;
+        discardModal.classList.remove('show');
+    }
+});
+
+socket.on('choose_victim', (data) => {
+    console.log('Choose victim event received:', data);
+    console.log('currentUser:', currentUser, 'currentPlayer:', currentPlayer);
+    
+    if (currentUser === currentPlayer) {
+        mustChooseVictim = true;
+        robberVictims = data.victims || [];
+        console.log('Should show modal now, victims:', robberVictims);
+        
+        renderVictimList();
+        victimModal.classList.remove('hidden');
+        victimModal.classList.add('show');
+    } else {
+        console.log('Not current player, skipping modal');
+    }
+});
+
+socket.on('resource_stolen', (data) => {
+    console.log('Resource stolen:', data);
+    if (data.victim === currentUser) {
+        alert(`Player ${data.player} stole 1 ${data.resource} from you!`);
+    } else {
+        logToGameConsole(`Player ${data.player} stole 1 ${data.resource} from ${data.victim}`);
+    }
+});
+
+function renderVictimList() {
+    victimList.innerHTML = '';
+    
+    const players = currentBoardData?.players || [];
+    
+    robberVictims.forEach(victimName => {
+        const player = players.find(p => p.name === victimName);
+        const color = player?.color || '#cccccc';
+        
+        const item = document.createElement('div');
+        item.className = 'victim-item';
+        item.innerHTML = `<div class="victim-color" style="background-color: ${color}"></div>${victimName}`;
+        item.addEventListener('click', () => {
+            socket.emit('choose_robber_victim', { name: currentUser, victim: victimName });
+            victimModal.classList.remove('show');
+            mustChooseVictim = false;
+        });
+        victimList.appendChild(item);
+    });
+}
+
+submitDiscardBtn.addEventListener('click', () => {
+    const resources = {
+        wood: parseInt(document.getElementById('discard-wood').value) || 0,
+        brick: parseInt(document.getElementById('discard-brick').value) || 0,
+        sheep: parseInt(document.getElementById('discard-sheep').value) || 0,
+        wheat: parseInt(document.getElementById('discard-wheat').value) || 0,
+        ore: parseInt(document.getElementById('discard-ore').value) || 0
+    };
+    
+    const total = resources.wood + resources.brick + resources.sheep + resources.wheat + resources.ore;
+    
+    if (total !== discardAmount) {
+        alert(`You must discard exactly ${discardAmount} cards`);
+        return;
+    }
+    
+    socket.emit('discard_resources', { name: currentUser, resources: resources });
 });
 
 socket.on('error', (data) => {
