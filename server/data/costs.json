@@ -1,5 +1,9 @@
 {
     "road": {"wood": 1, "brick": 1},
     "settlement": {"wood": 1, "brick": 1, "wheat": 1, "sheep": 1},
-    "city": {"wheat": 2, "ore": 3}
+    "city": {"wheat": 2, "ore": 3},
+    "knight": {"wheat": 1, "sheep": 1, "ore": 1},
+    "two_roads": {"brick": 1, "wheat": 1, "wood": 1},
+    "invention": {"wheat": 1, "sheep": 1, "ore": 1},
+    "monopoly": {"wheat": 1, "brick": 1, "ore": 1}
 }

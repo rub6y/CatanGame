@@ -26,7 +26,6 @@ const roleObserver = document.getElementById('role-observer');
 const joinColorPicker = document.getElementById('join-color-picker');
 const startGameBtn = document.getElementById('start-game-btn');
 const gamePlayersList = document.getElementById('game-players');
-const gameObserversList = document.getElementById('game-observers');
 const gameConsole = document.getElementById('game-console');
 const gameBoard = document.getElementById('game-board');
 const nextTurnBtn = document.getElementById('next-turn-btn');
@@ -47,6 +46,13 @@ const closeTradeModal = document.getElementById('close-trade-modal');
 const submitTradeBtn = document.getElementById('submit-trade-btn');
 const diceTimerEl = document.getElementById('dice-timer');
 const roundTimerEl = document.getElementById('round-timer');
+const buyDevCardBtn = document.getElementById('buy-dev-card-btn');
+const myDevCardsDiv = document.getElementById('my-dev-cards');
+const inventionModal = document.getElementById('invention-modal');
+const closeInventionModal = document.getElementById('close-invention-modal');
+const confirmInventionBtn = document.getElementById('confirm-invention-btn');
+const monopolyModal = document.getElementById('monopoly-modal');
+const closeMonopolyModal = document.getElementById('close-monopoly-modal');
 
 // Turn sound - preload
 const turnSound = new Audio('/static/audio/turn.wav');
@@ -195,6 +201,32 @@ upgradeCityBtn.addEventListener('click', () => {
 });
 
 /**
+ * Handle Buy Development Card button click
+ */
+buyDevCardBtn.addEventListener('click', () => {
+    if (!currentBoardData) {
+        return;
+    }
+    
+    if (currentBoardData.game_phase === 'setup') {
+        displayError('Cannot buy development cards during setup');
+        return;
+    }
+    
+    if (mustMoveRobber) {
+        displayError('You must move the robber first');
+        return;
+    }
+    
+    if (currentUser !== currentPlayer) {
+        displayError('It is not your turn');
+        return;
+    }
+    
+    socket.emit('buy_dev_card', { name: currentUser });
+});
+
+/**
  * Handle canvas click - place building at clicked position
  */
 document.getElementById('board-canvas').addEventListener('click', (event) => {
@@ -305,13 +337,15 @@ function renderUserList(data) {
 }
 
 /**
- * Render game sidebar (players and observers)
+ * Render game sidebar (players only - no observers in game)
  */
 function renderGameSidebar(data) {
     gamePlayersList.innerHTML = '';
-    gameObserversList.innerHTML = '';
 
-    data.players.forEach(name => {
+    // Handle both array of strings and array of player objects
+    const players = data.players.map(p => typeof p === 'string' ? p : p.name);
+
+    players.forEach(name => {
         const li = document.createElement('li');
         li.textContent = name;
         
@@ -330,12 +364,6 @@ function renderGameSidebar(data) {
         }
         
         gamePlayersList.appendChild(li);
-    });
-
-    data.observers.forEach(name => {
-        const li = document.createElement('li');
-        li.textContent = name;
-        gameObserversList.appendChild(li);
     });
 }
 
@@ -427,12 +455,118 @@ function renderBank() {
 }
 
 /**
+ * Render development cards panel - shows as buttons with conditional styling
+ */
+function renderDevCards() {
+    if (!currentBoardData) {
+        return;
+    }
+    
+    const player = currentBoardData.players?.find(p => p.name === currentUser);
+    if (!player || !player.dev_cards) {
+        myDevCardsDiv.innerHTML = '<div class="no-cards">No development cards</div>';
+        return;
+    }
+    
+    const cardIcons = {
+        knight: '⚔️ Knight',
+        two_roads: '🛤️ Two Roads',
+        invention: '💡 Invention',
+        monopoly: '💰 Monopoly',
+        victory_point: '🏆 Victory'
+    };
+    
+    const cardNames = {
+        knight: 'knight',
+        two_roads: 'two_roads',
+        invention: 'invention',
+        monopoly: 'monopoly',
+        victory_point: 'victory_point'
+    };
+    
+    const isMyTurn = currentUser === currentPlayer;
+    const hasRolledDice = currentBoardData.has_rolled_dice === true;
+    const currentTurn = currentBoardData.turn_count !== undefined ? currentBoardData.turn_count : 0;
+    const playerColor = player.color || '#3498db';
+    
+    let cardsHtml = '<div class="your-cards">Your Cards:</div>';
+    const hasCards = Object.values(player.dev_cards).some(card => card.count > 0);
+    
+    if (!hasCards) {
+        cardsHtml += '<div class="no-cards">No cards yet</div>';
+    } else {
+        for (const [cardType, cardData] of Object.entries(player.dev_cards)) {
+            if (cardData.count > 0) {
+                // Knight can be played without rolling dice (just needs turn delay)
+                const needsDice = cardType !== 'knight';
+                const cardCanPlay = isMyTurn && 
+                    (!needsDice || hasRolledDice) &&
+                    (cardData.purchase_turn === null || currentTurn - cardData.purchase_turn >= 1);
+                
+                const disabled = cardCanPlay ? '' : 'disabled';
+                const btnClass = cardCanPlay ? 'dev-card-btn playable' : 'dev-card-btn';
+                const style = cardCanPlay ? `background-color: ${playerColor};` : '';
+                
+                cardsHtml += `<button class="${btnClass}" data-card-type="${cardNames[cardType]}" ${disabled} style="${style}">${cardIcons[cardType]} (${cardData.count})</button>`;
+            }
+        }
+    }
+    
+    myDevCardsDiv.innerHTML = cardsHtml;
+    
+    // Add click handlers for card buttons
+    document.querySelectorAll('.dev-card-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const cardType = e.target.getAttribute('data-card-type');
+            handlePlayDevCard(cardType);
+        });
+    });
+}
+
+/**
+ * Handle playing a development card
+ */
+function handlePlayDevCard(cardType) {
+    if (!currentBoardData) {
+        return;
+    }
+    
+    if (currentBoardData.game_phase === 'setup') {
+        displayError('Cannot play development cards during setup');
+        return;
+    }
+    
+    if (mustMoveRobber) {
+        displayError('You must move the robber first');
+        return;
+    }
+    
+    if (currentUser !== currentPlayer) {
+        displayError('It is not your turn');
+        return;
+    }
+    
+    // Check if player has this card
+    const player = currentBoardData.players?.find(p => p.name === currentUser);
+    if (!player || !player.dev_cards || player.dev_cards[cardType] <= 0) {
+        displayError('You do not have this card');
+        return;
+    }
+    
+    // TODO: Implement card-specific logic
+    console.log('Playing development card:', cardType);
+    socket.emit('play_dev_card', { name: currentUser, card_type: cardType });
+}
+
+/**
  * Update game UI based on phase (setup vs playing)
  */
 function updateGameUI(boardData) {
     const setupIndicator = document.getElementById('setup-indicator');
     const setupPlayerName = document.getElementById('setup-player-name');
     const setupActionText = document.getElementById('setup-action-text');
+    const freeRoadsIndicator = document.getElementById('free-roads-indicator');
+    const freeRoadsText = document.getElementById('free-roads-text');
     const rollDiceBtn = document.getElementById('roll-dice-btn');
     const placeSettlementBtn = document.getElementById('place-settlement-btn');
     const placeRoadBtn = document.getElementById('place-road-btn');
@@ -453,7 +587,16 @@ function updateGameUI(boardData) {
     
     // If must move robber, show message and disable other actions
     if (mustMoveRobber && currentUser === currentPlayer) {
-        alert('You rolled 7! You must move the robber. Click on a hex to place the robber.');
+        alert('You must move the robber. Click on a hex to place the robber.');
+    }
+    
+    // Update free roads indicator
+    const freeRoadsRemaining = boardData.free_roads_remaining || 0;
+    if (freeRoadsRemaining > 0 && currentUser === currentPlayer) {
+        freeRoadsIndicator.classList.remove('hidden');
+        freeRoadsText.textContent = `Free Roads: ${freeRoadsRemaining} remaining`;
+    } else {
+        freeRoadsIndicator.classList.add('hidden');
     }
     
     if (gamePhase === 'setup') {
@@ -742,6 +885,82 @@ function declineTrade(offerId) {
 }
 
 /**
+ * Show invention modal (for Invention/Year of Plenty card)
+ */
+function showInventionModal() {
+    inventionModal.classList.remove('hidden');
+    inventionModal.classList.add('show');
+    // Reset inputs
+    ['wood', 'brick', 'sheep', 'wheat', 'ore'].forEach(res => {
+        document.getElementById(`invention-${res}`).value = 0;
+    });
+}
+
+/**
+ * Hide invention modal
+ */
+function hideInventionModal() {
+    inventionModal.classList.remove('show');
+    inventionModal.classList.add('hidden');
+}
+
+/**
+ * Confirm invention card selection - get 2 resources
+ */
+function confirmInvention() {
+    const selected = {};
+    let total = 0;
+    
+    ['wood', 'brick', 'sheep', 'wheat', 'ore'].forEach(res => {
+        const count = parseInt(document.getElementById(`invention-${res}`).value) || 0;
+        if (count > 0) {
+            selected[res] = count;
+            total += count;
+        }
+    });
+    
+    if (total !== 2) {
+        alert('Please select exactly 2 resources');
+        return;
+    }
+    
+    socket.emit('use_invention', {
+        name: currentUser,
+        resources: selected
+    });
+    
+    hideInventionModal();
+}
+
+/**
+ * Show monopoly modal (for Monopoly card)
+ */
+function showMonopolyModal() {
+    monopolyModal.classList.remove('hidden');
+    monopolyModal.classList.add('show');
+}
+
+/**
+ * Hide monopoly modal
+ */
+function hideMonopolyModal() {
+    monopolyModal.classList.remove('show');
+    monopolyModal.classList.add('hidden');
+}
+
+/**
+ * Confirm monopoly - steal resource from all players
+ */
+function confirmMonopoly(resourceType) {
+    socket.emit('use_monopoly', {
+        name: currentUser,
+        resource_type: resourceType
+    });
+    
+    hideMonopolyModal();
+}
+
+/**
  * Cancel your trade offer
  */
 function cancelTrade(offerId) {
@@ -768,6 +987,25 @@ if (closeTradeModal) closeTradeModal.addEventListener('click', hideTradeModal);
 if (submitTradeBtn) submitTradeBtn.addEventListener('click', submitTrade);
 if (tradeModal) tradeModal.addEventListener('click', (e) => {
     if (e.target === tradeModal) hideTradeModal();
+});
+
+// Invention modal event listeners
+if (closeInventionModal) closeInventionModal.addEventListener('click', hideInventionModal);
+if (inventionModal) inventionModal.addEventListener('click', (e) => {
+    if (e.target === inventionModal) hideInventionModal();
+});
+if (confirmInventionBtn) confirmInventionBtn.addEventListener('click', confirmInvention);
+
+// Monopoly modal event listeners
+if (closeMonopolyModal) closeMonopolyModal.addEventListener('click', hideMonopolyModal);
+if (monopolyModal) monopolyModal.addEventListener('click', (e) => {
+    if (e.target === monopolyModal) hideMonopolyModal();
+});
+document.querySelectorAll('.monopoly-res-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        const resourceType = e.target.getAttribute('data-resource');
+        confirmMonopoly(resourceType);
+    });
 });
 
 /**
@@ -956,7 +1194,7 @@ socket.on('game_started', (data) => {
         window.BoardRenderer.render(data.board, 'board-canvas');
     }
     
-    renderGameSidebar(data);
+    renderGameSidebar({ players: data.board.players });
     updateConsoleVisibility();
     
     // Set color picker to current user's color
@@ -987,6 +1225,9 @@ socket.on('game_started', (data) => {
         diceDisplay.innerHTML = '';
     }
     
+    // Render dev cards
+    renderDevCards();
+    
     console.log('Game started! Player order:', data.players);
     console.log('Current player:', data.current_player);
 });
@@ -1001,7 +1242,7 @@ socket.on('game_state', (data) => {
     }
     userScreen.classList.add('hidden');
     gameScreen.classList.remove('hidden');
-    renderGameSidebar(data);
+    renderGameSidebar({ players: data.players });
     updateConsoleVisibility();
     
     // Store board data and render
@@ -1010,6 +1251,7 @@ socket.on('game_state', (data) => {
         window.BoardRenderer.render(data.board, 'board-canvas');
         renderResourcePanel();
         renderBank();
+        renderDevCards();
     }
     
     // Set color picker to current user's color
@@ -1027,7 +1269,7 @@ socket.on('game_state', (data) => {
 socket.on('turn_changed', (data) => {
     const wasMyTurn = currentPlayer === currentUser;
     currentPlayer = data.current_player;
-    renderGameSidebar({ players: data.players, observers: data.observers });
+    renderGameSidebar({ players: data.players });
     updateConsoleVisibility();
     renderResourcePanel();
     console.log('Turn changed. Current player:', data.current_player);
@@ -1077,7 +1319,7 @@ socket.on('player_color_changed', (data) => {
     // Update buttons and sidebar with new color
     updateButtonColors();
     if (currentPlayer) {
-        renderGameSidebar({ players: currentBoardData?.players?.map(p => p.name) || [], observers: [] });
+        renderGameSidebar({ players: currentBoardData?.players?.map(p => p.name) || [] });
     }
 });
 
@@ -1109,6 +1351,7 @@ socket.on('board_updated', (data) => {
     renderResourcePanel();
     renderBank();
     renderTradeOffers();
+    renderDevCards();
     updateGameUI(data.board);
     updateButtonColors();
     updateTimers(data.board);
@@ -1118,6 +1361,20 @@ socket.on('board_updated', (data) => {
         setTimeout(() => {
             window.BoardRenderer.render(currentBoardData, 'board-canvas', null);
         }, 2000);
+    }
+});
+
+socket.on('dev_card_bought', (data) => {
+    console.log('Development card bought:', data);
+});
+
+socket.on('dev_card_played', (data) => {
+    console.log('Development card played:', data);
+    if (data.card_type === 'invention' && data.needs_resources && data.player === currentUser) {
+        showInventionModal();
+    }
+    if (data.card_type === 'monopoly' && data.needs_resource && data.player === currentUser) {
+        showMonopolyModal();
     }
 });
 

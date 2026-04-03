@@ -49,9 +49,10 @@
                     <h2>Players</h2>
                     <ul id="game-players"></ul>
                 </div>
-                <div class="observer-list">
-                    <h2>Observers</h2>
-                    <ul id="game-observers"></ul>
+                <div id="dev-cards-panel">
+                    <h2>Development Cards</h2>
+                    <button id="buy-dev-card-btn">Buy Card</button>
+                    <div id="my-dev-cards"></div>
                 </div>
             </div>
             <div class="game-main">
@@ -62,6 +63,9 @@
                     <div id="setup-indicator" class="hidden">
                         <span id="setup-player-name"></span>
                         <span id="setup-action-text"></span>
+                    </div>
+                    <div id="free-roads-indicator" class="hidden">
+                        <span id="free-roads-text">Free Roads: 2 remaining</span>
                     </div>
                     <div class="timer-container">
                         <div id="dice-timer" class="timer">Dice: 15s</div>
@@ -125,6 +129,39 @@
                 </div>
             </div>
             <button id="submit-trade-btn">Propose</button>
+        </div>
+    </div>
+
+    <!-- Invention Card Modal -->
+    <div id="invention-modal" class="modal hidden">
+        <div class="modal-content">
+            <span id="close-invention-modal" class="close">&times;</span>
+            <h2>Choose 2 Resources</h2>
+            <p class="invention-info">Select 2 resources to receive:</p>
+            <div class="resource-selector">
+                <label>🌲 Wood: <input type="number" id="invention-wood" min="0" max="2" value="0"></label>
+                <label>🧱 Brick: <input type="number" id="invention-brick" min="0" max="2" value="0"></label>
+                <label>🐑 Sheep: <input type="number" id="invention-sheep" min="0" max="2" value="0"></label>
+                <label>🌾 Wheat: <input type="number" id="invention-wheat" min="0" max="2" value="0"></label>
+                <label>🪨 Ore: <input type="number" id="invention-ore" min="0" max="2" value="0"></label>
+            </div>
+            <button id="confirm-invention-btn">Get Resources</button>
+        </div>
+    </div>
+
+    <!-- Monopoly Card Modal -->
+    <div id="monopoly-modal" class="modal hidden">
+        <div class="modal-content">
+            <span id="close-monopoly-modal" class="close">&times;</span>
+            <h2>Choose Resource to Steal</h2>
+            <p class="monopoly-info">Select one resource type to steal from all players:</p>
+            <div class="resource-buttons">
+                <button class="monopoly-res-btn" data-resource="wood">🌲 Wood</button>
+                <button class="monopoly-res-btn" data-resource="brick">🧱 Brick</button>
+                <button class="monopoly-res-btn" data-resource="sheep">🐑 Sheep</button>
+                <button class="monopoly-res-btn" data-resource="wheat">🌾 Wheat</button>
+                <button class="monopoly-res-btn" data-resource="ore">🪨 Ore</button>
+            </div>
         </div>
     </div>
 
