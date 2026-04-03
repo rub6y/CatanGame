@@ -193,6 +193,7 @@ def handle_next_turn(data):
         return
 
     current_game.current_player_index = (current_game.current_player_index + 1) % len(current_game.players)
+    current_game.turn_count += 1
     new_current_player = current_game.players[current_game.current_player_index]
     new_current_player_name = new_current_player.name if new_current_player else None
     
@@ -473,12 +474,17 @@ def handle_place_road(data):
     
     # Playing phase: check and deduct cost
     if current_game.game_phase == "playing":
-        if not current_game.can_afford(name, 'road'):
-            cost = current_game.get_cost('road')
-            cost_str = ', '.join(f"{v} {k}" for k, v in cost.items())
-            emit('error', {'message': f'Not enough resources. Need: {cost_str}'})
-            return
-        current_game.deduct_cost(name, 'road')
+        # Check if player has free roads from Two Roads card
+        if current_game.free_roads_remaining > 0:
+            current_game.free_roads_remaining -= 1
+            print(f"Free road placed! Remaining: {current_game.free_roads_remaining}")
+        else:
+            if not current_game.can_afford(name, 'road'):
+                cost = current_game.get_cost('road')
+                cost_str = ', '.join(f"{v} {k}" for k, v in cost.items())
+                emit('error', {'message': f'Not enough resources. Need: {cost_str}'})
+                return
+            current_game.deduct_cost(name, 'road')
     
     # Place road (store with player name)
     edge.road = {'player': name}
@@ -561,6 +567,128 @@ def handle_upgrade_city(data):
     print(f"Player {name} upgraded settlement to city at {vertex_key}")
     
     # Broadcast updated board
+    emit('board_updated', {
+        'board': current_game.get_board_data()
+    }, broadcast=True)
+
+
+@socketio.on('buy_dev_card')
+def handle_buy_dev_card(data):
+    if current_game is None or current_game.game_state != "started":
+        return
+    
+    if current_game.game_phase == "setup":
+        emit('error', {'message': 'Cannot buy development cards during setup'})
+        return
+    
+    if current_game.must_move_robber:
+        emit('error', {'message': 'You must move the robber first'})
+        return
+    
+    name = data.get('name', '')
+    
+    if not name:
+        return
+    
+    current_player = current_game.players[current_game.current_player_index]
+    if current_player.name != name:
+        emit('error', {'message': f'Only {current_player.name} can buy development cards'})
+        return
+    
+    result = current_game.buy_dev_card(name)
+    
+    if result.get('success'):
+        card_type = result.get('card_type')
+        emit('dev_card_bought', {
+            'card_type': card_type,
+            'player': name
+        })
+        emit('board_updated', {
+            'board': current_game.get_board_data()
+        }, broadcast=True)
+    else:
+        emit('error', {'message': result.get('error', 'Failed to buy development card')})
+
+
+@socketio.on('play_dev_card')
+def handle_play_dev_card(data):
+    if current_game is None or current_game.game_state != "started":
+        return
+    
+    if current_game.game_phase == "setup":
+        emit('error', {'message': 'Cannot play development cards during setup'})
+        return
+    
+    name = data.get('name', '')
+    card_type = data.get('card_type', '')
+    
+    if not name or not card_type:
+        return
+    
+    current_player = current_game.players[current_game.current_player_index]
+    if current_player.name != name:
+        emit('error', {'message': f'Only {current_player.name} can play development cards'})
+        return
+    
+    # Check if card can be played (dice rolled + one turn delay)
+    # Exception: Knight can be played even if must_move_robber is already true (to reassign robber)
+    if card_type != 'knight':
+        if current_game.must_move_robber:
+            emit('error', {'message': 'You must move the robber first'})
+            return
+    
+    can_play, error_msg = current_game.can_play_dev_card(name, card_type)
+    if not can_play:
+        emit('error', {'message': error_msg})
+        return
+    
+    player = current_game.get_player(name)
+    player.dev_cards[card_type]['count'] -= 1
+    
+    # Handle Knight card effect - move robber
+    if card_type == 'knight':
+        current_game.must_move_robber = True
+        print(f"Player {name} played Knight - must move robber")
+    
+    # Handle Invention card effect - prompt for resources
+    elif card_type == 'invention':
+        print(f"Player {name} played Invention - waiting for resource selection")
+        emit('dev_card_played', {
+            'card_type': card_type,
+            'player': name,
+            'needs_resources': True
+        }, broadcast=True)
+        emit('board_updated', {
+            'board': current_game.get_board_data()
+        }, broadcast=True)
+        return
+    
+    # Handle Two Roads card effect - free roads
+    elif card_type == 'two_roads':
+        current_game.free_roads_remaining = 2
+        print(f"Player {name} played Two Roads - 2 free roads")
+    
+    # Handle Monopoly card effect - prompt for resource
+    elif card_type == 'monopoly':
+        print(f"Player {name} played Monopoly - waiting for resource selection")
+        emit('dev_card_played', {
+            'card_type': card_type,
+            'player': name,
+            'needs_resource': True
+        }, broadcast=True)
+        emit('board_updated', {
+            'board': current_game.get_board_data()
+        }, broadcast=True)
+        return
+    
+    print(f"Player {name} played {card_type}")
+    
+    emit('dev_card_played', {
+        'card_type': card_type,
+        'player': name,
+        'must_move_robber': current_game.must_move_robber if card_type == 'knight' else False
+    }, broadcast=True)
+    
     emit('board_updated', {
         'board': current_game.get_board_data()
     }, broadcast=True)
@@ -665,6 +793,35 @@ def handle_discard_resources(data):
     }, broadcast=True)
 
 
+@socketio.on('use_invention')
+def handle_use_invention(data):
+    if current_game is None or current_game.game_state != "started":
+        return
+    
+    name = data.get('name', '')
+    resources = data.get('resources', {})
+    
+    if not name or not resources:
+        return
+    
+    player = current_game.get_player(name)
+    if not player:
+        return
+    
+    # Add resources to player
+    for resource_type, count in resources.items():
+        if count > 0 and resource_type in current_game.bank.resources:
+            for _ in range(count):
+                if current_game.bank.take(resource_type):
+                    player.resources[resource_type] = player.resources.get(resource_type, 0) + 1
+    
+    print(f"Player {name} used Invention card, received: {resources}")
+    
+    emit('board_updated', {
+        'board': current_game.get_board_data()
+    }, broadcast=True)
+
+
 @socketio.on('choose_robber_victim')
 def handle_choose_robber_victim(data):
     if current_game is None or current_game.game_state != "started":
@@ -701,6 +858,27 @@ def handle_choose_robber_victim(data):
             'victim': victim_name,
             'resource': stolen
         }, broadcast=True)
+    
+    emit('board_updated', {
+        'board': current_game.get_board_data()
+    }, broadcast=True)
+
+
+@socketio.on('use_monopoly')
+def handle_use_monopoly(data):
+    if current_game is None or current_game.game_state != "started":
+        return
+    
+    name = data.get('name', '')
+    resource_type = data.get('resource_type', '')
+    
+    if not name or not resource_type:
+        return
+    
+    result = current_game.use_monopoly(name, resource_type)
+    
+    if result.get('success'):
+        print(f"Player {name} stole {result['stolen_count']} {resource_type} from {result['stolen_from']}")
     
     emit('board_updated', {
         'board': current_game.get_board_data()

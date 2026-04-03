@@ -21,6 +21,13 @@ class Player:
         self.name = name
         self.color = color
         self.resources = {}
+        self.dev_cards = {
+            'knight': {'count': 0, 'purchase_turn': None},
+            'two_roads': {'count': 0, 'purchase_turn': None},
+            'invention': {'count': 0, 'purchase_turn': None},
+            'monopoly': {'count': 0, 'purchase_turn': None},
+            'victory_point': {'count': 0, 'purchase_turn': None}
+        }
         self.settlements = []
         self.cities = []
         self.roads = []
@@ -36,8 +43,18 @@ class Player:
             'name': self.name,
             'color': self.color,
             'resources': self.resources,
+            'dev_cards': self.dev_cards,
             'settlements': self.settlements,
             'cities': self.cities,
             'roads': self.roads,
             'victory_points': self.victory_points
         }
+    
+    def get_playable_dev_cards(self, current_turn: int) -> dict:
+        """Get development cards that can be played (bought at least 1 turn ago)."""
+        playable = {}
+        for card_type, card_data in self.dev_cards.items():
+            if card_data['count'] > 0 and card_data['purchase_turn'] is not None:
+                if current_turn - card_data['purchase_turn'] >= 1:
+                    playable[card_type] = card_data['count']
+        return playable

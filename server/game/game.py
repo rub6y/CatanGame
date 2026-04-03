@@ -111,6 +111,12 @@ class Game:
         self.dice_rolled_time = None  # timestamp when dice was rolled
         self.has_rolled_dice = False  # whether player has rolled in current turn
         
+        # Game turn counter
+        self.turn_count = 0  # Increments after each player's turn ends
+        
+        # Free roads from Two Roads development card
+        self.free_roads_remaining = 0  # Number of free roads player can place
+        
         # Load building costs from JSON file
         costs_file = os.path.join(os.path.dirname(__file__), '..', 'data', 'costs.json')
         with open(costs_file, 'r') as f:
@@ -630,6 +636,7 @@ class Game:
             'edges': edges,
             'players': [p.to_dict() for p in self.players],
             'bank': self.bank.get_all(),
+            'dev_card_deck': self.bank.get_dev_card_counts(),
             'trades': {
                 'active': self.trade_manager.get_all_active(),
                 'my_offers': my_offers
@@ -644,7 +651,9 @@ class Game:
             'players_needing_discard': self.players_needing_discard,
             'dice_roll_time': self.get_dice_roll_time_remaining(),
             'round_time': self.get_round_time_remaining(),
-            'has_rolled_dice': self.has_rolled_dice
+            'has_rolled_dice': self.has_rolled_dice,
+            'turn_count': self.turn_count,
+            'free_roads_remaining': self.free_roads_remaining
         }
     
     def distribute_resources(self, dice_total: int):
@@ -880,6 +889,78 @@ class Game:
             self.bank.return_resources(resource, amount)
         return True
     
+    def buy_dev_card(self, player_name: str) -> dict:
+        """Buy a development card from the bank. Returns result dict."""
+        player = self.get_player(player_name)
+        if not player:
+            return {'success': False, 'error': 'Player not found'}
+        
+        if not self.can_afford(player_name, 'knight'):
+            return {'success': False, 'error': 'Cannot afford development card'}
+        
+        card_type = self.bank.draw_dev_card()
+        if not card_type:
+            return {'success': False, 'error': 'No development cards left'}
+        
+        if not self.deduct_cost(player_name, 'knight'):
+            self.bank.return_dev_card(card_type)
+            return {'success': False, 'error': 'Failed to deduct cost'}
+        
+        player.dev_cards[card_type]['count'] += 1
+        player.dev_cards[card_type]['purchase_turn'] = self.turn_count
+        return {'success': True, 'card_type': card_type}
+    
+    def get_dev_cards_for_player(self, player_name: str) -> dict:
+        """Get development cards for a specific player."""
+        player = self.get_player(player_name)
+        if not player:
+            return {}
+        return player.dev_cards.copy()
+    
+    def use_monopoly(self, player_name: str, resource_type: str) -> dict:
+        """Use monopoly card - steal ALL of specified resource from all other players."""
+        player = self.get_player(player_name)
+        if not player:
+            return {'success': False, 'error': 'Player not found'}
+        
+        if resource_type not in self.bank.resources:
+            return {'success': False, 'error': 'Invalid resource type'}
+        
+        stolen_count = 0
+        stolen_from = []
+        
+        for other_player in self.players:
+            if other_player.name == player_name:
+                continue
+            
+            other_resources = other_player.resources.get(resource_type, 0)
+            if other_resources > 0:
+                other_player.resources[resource_type] = 0
+                player.resources[resource_type] = player.resources.get(resource_type, 0) + other_resources
+                stolen_count += other_resources
+                stolen_from.append(f"{other_player.name}({other_resources})")
+        
+        print(f"Player {player_name} used Monopoly on {resource_type}: stole {stolen_count} from {stolen_from}")
+        return {'success': True, 'stolen_count': stolen_count, 'stolen_from': stolen_from}
+    
+    def can_play_dev_card(self, player_name: str, card_type: str) -> tuple:
+        """Check if player can play a development card. Returns (can_play: bool, error: str)."""
+        player = self.get_player(player_name)
+        if not player:
+            return (False, 'Player not found')
+        
+        card_data = player.dev_cards.get(card_type)
+        if not card_data or card_data['count'] <= 0:
+            return (False, 'You do not have this card')
+        
+        if not self.has_rolled_dice and card_type != 'knight':
+            return (False, 'You must roll the dice first')
+        
+        if card_data['purchase_turn'] is not None and self.turn_count - card_data['purchase_turn'] < 1:
+            return (False, 'Cannot play card in the same turn it was purchased')
+        
+        return (True, '')
+    
     def start(self):
         """Start the game and shuffle player order."""
         random.shuffle(self.players)
@@ -896,6 +977,7 @@ class Game:
         self.turn_start_time = time.time()
         self.dice_rolled_time = None
         self.has_rolled_dice = False
+        self.free_roads_remaining = 0  # Reset free roads at start of turn
     
     def get_dice_roll_time_remaining(self) -> int:
         """Get seconds remaining for dice roll."""
