@@ -52,6 +52,9 @@ class Vertex:
                    Note: Vertices have no coordinate divisible by 3.
         building (dict or None): Contains {"type": "settlement"/"city", 
                                     "player": player_name} if occupied.
+        port (dict or None): Contains port info if this vertex is a port:
+            - "type": "generic" (3:1) or resource type (2:1)
+            - "resource": for resource-specific ports: "wood", "brick", "sheep", "wheat", "ore"
         neighbors (dict): Dictionary with keys:
             - "hexes": List of 3 adjacent hex keys
             - "edges": List of 3 adjacent edge keys  
@@ -67,6 +70,7 @@ class Vertex:
         """
         self.key = key
         self.building = None  # {"type": "settlement"/"city", "player": name}
+        self.port = None  # {"type": "generic"/resource, "resource": resource_type}
         self.neighbors = {
             "hexes": [],      # 3 adjacent hex keys
             "edges": [],      # 3 adjacent edge keys

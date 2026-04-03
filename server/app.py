@@ -377,6 +377,11 @@ def handle_place_settlement(data):
         'player': name
     }
     
+    # Track settlement on player object for victory points
+    player = current_game.get_player(name)
+    if player:
+        player.settlements.append(vertex_key)
+    
     # Track settlement for starter resources
     current_game.track_settlement(name, vertex_key)
     
@@ -397,9 +402,19 @@ def handle_place_settlement(data):
         current_game.setup_action = "settlement"
     
     # Broadcast updated board
+    board_data = current_game.get_board_data()
     emit('board_updated', {
-        'board': current_game.get_board_data()
+        'board': board_data
     }, broadcast=True)
+    
+    # Check for victory condition
+    player = current_game.get_player(name)
+    if player:
+        vp = player.get_victory_points(current_game.longest_road_holder, current_game.largest_army_holder)
+        if vp >= 10:
+            emit('game_won', {'player': name, 'victory_points': vp}, broadcast=True)
+            print(f"GAME OVER! {name} wins with {vp} victory points!")
+            current_game.game_state = "finished"
 
 
 @socketio.on('place_road')
@@ -491,6 +506,10 @@ def handle_place_road(data):
     
     print(f"Player {name} placed road at {edge_key}")
     
+    # Update longest road
+    if current_game.game_phase == "playing":
+        current_game.update_longest_road()
+    
     # Setup phase: advance to next player after road
     if current_game.game_phase == "setup":
         current_game._advance_setup_turn()
@@ -564,12 +583,27 @@ def handle_upgrade_city(data):
         'player': name
     }
     
+    # Track city on player object for victory points
+    player = current_game.get_player(name)
+    if player and vertex_key in player.settlements:
+        player.settlements.remove(vertex_key)
+        player.cities.append(vertex_key)
+    
     print(f"Player {name} upgraded settlement to city at {vertex_key}")
     
     # Broadcast updated board
+    board_data = current_game.get_board_data()
     emit('board_updated', {
-        'board': current_game.get_board_data()
+        'board': board_data
     }, broadcast=True)
+    
+    # Check for victory condition
+    if player:
+        vp = player.get_victory_points(current_game.longest_road_holder, current_game.largest_army_holder)
+        if vp >= 10:
+            emit('game_won', {'player': name, 'victory_points': vp}, broadcast=True)
+            print(f"GAME OVER! {name} wins with {vp} victory points!")
+            current_game.game_state = "finished"
 
 
 @socketio.on('buy_dev_card')
@@ -648,7 +682,22 @@ def handle_play_dev_card(data):
     # Handle Knight card effect - move robber
     if card_type == 'knight':
         current_game.must_move_robber = True
+        player.knights_played += 1
+        current_game.update_largest_army()
         print(f"Player {name} played Knight - must move robber")
+    
+    # Handle Victory Point card effect - add to player's VP
+    elif card_type == 'victory_point':
+        player.victory_points += 1
+        print(f"Player {name} played Victory Point - now has {player.victory_points} VP")
+        
+        # Check for victory condition
+        vp = player.get_victory_points(current_game.longest_road_holder, current_game.largest_army_holder)
+        if vp >= 10:
+            emit('game_won', {'player': name, 'victory_points': vp}, broadcast=True)
+            print(f"GAME OVER! {name} wins with {vp} victory points!")
+            current_game.game_state = "finished"
+            return
     
     # Handle Invention card effect - prompt for resources
     elif card_type == 'invention':
@@ -925,14 +974,33 @@ def handle_propose_trade(data):
             emit('error', {'message': f'Not enough {resource}: have {available}, offering {count}'})
             return
     
-    # Check if this is a bank trade (4:1 or better ratio)
+    # Check if this is a bank trade (check player's port-based ratio)
     offered_total = sum(offered.values())
     wanted_total = sum(wanted.values())
     ratio = offered_total / wanted_total if wanted_total > 0 else 0
     
-    if ratio >= current_game.trade_manager.bank_trade_ratio:
+    # Get player's ports to determine their trade rate
+    player_ports = current_game.get_player_ports(name)
+    generic_port = "generic" in player_ports
+    resource_ports = {r for r in ["wood", "brick", "sheep", "wheat", "ore"] if r in player_ports}
+    
+    # Determine best trade rate for player
+    # Check if player has 2:1 port for ANY resource they're offering
+    # If yes, they can trade 2 of that resource for ANY resource
+    best_rate = 4
+    if generic_port:
+        best_rate = 3
+    
+    # Check if player has a 2:1 port for any of the offered resources
+    if offered_total > 0:
+        for resource in offered.keys():
+            if resource in resource_ports:
+                best_rate = min(best_rate, 2)
+                break
+    
+    if ratio >= best_rate:
         # Execute bank trade immediately
-        print(f"Auto-completing bank trade! Ratio: {ratio}:1")
+        print(f"Auto-completing bank trade for {name}! Ratio: {ratio}:1 (best rate: {best_rate}:1)")
         
         # Transfer resources from player to bank
         for resource, count in offered.items():
@@ -956,7 +1024,8 @@ def handle_propose_trade(data):
         print(f"Bank trade completed for {name}")
         emit('bank_trade_completed', {
             'offered': offered,
-            'wanted': wanted
+            'wanted': wanted,
+            'rate_used': best_rate
         }, broadcast=True)
         emit('board_updated', {
             'board': current_game.get_board_data()

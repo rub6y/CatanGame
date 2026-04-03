@@ -358,12 +358,30 @@ function renderGameSidebar(data) {
     // Handle both array of strings and array of player objects
     const players = data.players.map(p => typeof p === 'string' ? p : p.name);
 
+    // Get longest road and largest army data from board
+    const longestRoadHolder = currentBoardData?.longest_road_holder || null;
+    const largestArmyHolder = currentBoardData?.largest_army_holder || null;
+    const longestRoadLengths = currentBoardData?.longest_road_length || {};
+    const knightsPlayed = currentBoardData?.knights_played || {};
+
     players.forEach(name => {
         const li = document.createElement('li');
-        li.textContent = name;
+        
+        // Get player data for points
+        const playerData = currentBoardData?.players?.find(p => p.name === name);
+        const points = playerData?.victory_points || 0;
+        
+        // Get road length and knights played
+        const roadLength = longestRoadLengths[name] || 0;
+        const knights = knightsPlayed[name] || 0;
+        
+        // Add indicators for longest road and largest army
+        const roadIndicator = name === longestRoadHolder ? ' 👑' : '';
+        const armyIndicator = name === largestArmyHolder ? ' 🛡️' : '';
+        
+        li.textContent = `${name} (${points} pts) | Rd:${roadLength}${roadIndicator} Kn:${knights}${armyIndicator}`;
         
         // Color each player with their own color
-        const playerData = currentBoardData?.players?.find(p => p.name === name);
         if (playerData?.color) {
             li.style.backgroundColor = playerData.color;
             li.style.color = getContrastColor(playerData.color);
@@ -1413,6 +1431,13 @@ socket.on('dev_card_played', (data) => {
     if (data.card_type === 'monopoly' && data.needs_resource && data.player === currentUser) {
         showMonopolyModal();
     }
+});
+
+socket.on('game_won', (data) => {
+    console.log('Game won:', data);
+    alert(`🎉 GAME OVER! 🎉\n\n${data.player} wins with ${data.victory_points} victory points!`);
+    // Optionally disable game interactions
+    gameStarted = false;
 });
 
 socket.on('trade_proposed', (data) => {

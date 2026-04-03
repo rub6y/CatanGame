@@ -117,6 +117,12 @@ class Game:
         # Free roads from Two Roads development card
         self.free_roads_remaining = 0  # Number of free roads player can place
         
+        # Longest Road and Largest Army
+        self.longest_road_holder = None  # Player name with longest road
+        self.largest_army_holder = None  # Player name with largest army
+        self.longest_road_length = {}  # player_name -> longest road length
+        self.knights_played = {}  # player_name -> knight cards played
+        
         # Load building costs from JSON file
         costs_file = os.path.join(os.path.dirname(__file__), '..', 'data', 'costs.json')
         with open(costs_file, 'r') as f:
@@ -388,6 +394,9 @@ class Game:
         # Step 4: Build all neighbor relationships
         self._build_neighbor_relationships()
         
+        # Step 5: Assign ports to edge vertices
+        self._assign_ports()
+        
         print(f"\n=== Board Generated ===")
         print(f"Total hexes: {len(self.hexes)}")
         print(f"Total vertices: {len(self.vertices)}")
@@ -593,6 +602,83 @@ class Game:
                     if connected_vertex_key != vertex_key and connected_vertex_key not in vertex_obj.neighbors["vertices"]:
                         vertex_obj.neighbors["vertices"].append(connected_vertex_key)
     
+    def _assign_ports(self):
+        """Assign ports to 9 vertices on the edge of the map (evenly distributed)."""
+        import random
+        
+        # Find all edge vertices - vertices that don't have 3 adjacent hexes
+        edge_vertices = []
+        for vertex_key, vertex_obj in self.vertices.items():
+            hex_neighbors = vertex_obj.neighbors.get("hexes", [])
+            if len(hex_neighbors) < 3:
+                edge_vertices.append(vertex_key)
+        
+        edge_vertices = list(set(edge_vertices))
+        
+        if len(edge_vertices) < 9:
+            print(f"Warning: Only {len(edge_vertices)} edge vertices found")
+            port_vertices = edge_vertices[:9] if edge_vertices else []
+        else:
+            # Sort edge vertices by angle to distribute evenly around the board
+            def get_vertex_angle(vertex_key):
+                """Get approximate angle for sorting vertices."""
+                coords = self._parse_key(vertex_key)
+                x, y, z = coords
+                # Use atan2 to get angle from center
+                # Project 3D coord to 2D
+                px = x + 0.5 * z
+                py = 0.866 * z  # sqrt(3)/2
+                import math
+                return math.atan2(py, px)
+            
+            # Sort by angle
+            edge_vertices.sort(key=get_vertex_angle)
+            
+            # Select 9 evenly spaced vertices
+            step = len(edge_vertices) / 9
+            port_vertices = [edge_vertices[int(i * step)] for i in range(9)]
+        
+        random.shuffle(port_vertices)
+        
+        # Port types: 4 generic (3:1), 5 resource-specific (2:1)
+        port_types = ["generic"] * 4 + ["wood", "brick", "sheep", "wheat", "ore"]
+        random.shuffle(port_types)
+        
+        # Assign ports to vertices
+        for i, vertex_key in enumerate(port_vertices):
+            if vertex_key in self.vertices:
+                vertex_obj = self.vertices[vertex_key]
+                resource_type = port_types[i]
+                
+                if resource_type == "generic":
+                    vertex_obj.port = {"type": "generic"}
+                else:
+                    vertex_obj.port = {"type": "resource", "resource": resource_type}
+        
+        # Count ports for debug
+        generic_count = sum(1 for v in self.vertices.values() if v.port and v.port.get("type") == "generic")
+        resource_count = sum(1 for v in self.vertices.values() if v.port and v.port.get("type") == "resource")
+        print(f"Ports assigned: {generic_count} generic (3:1), {resource_count} resource (2:1)")
+    
+    def get_player_ports(self, player_name: str) -> dict:
+        """Get all ports accessible to a player based on their settlements/cities."""
+        player = self.get_player(player_name)
+        if not player:
+            return {}
+        
+        ports = {}
+        for vertex_key in player.settlements + player.cities:
+            vertex = self.vertices.get(vertex_key)
+            if vertex and vertex.port:
+                port_type = vertex.port.get("type")
+                if port_type == "generic":
+                    ports["generic"] = True
+                elif port_type == "resource":
+                    resource = vertex.port.get("resource")
+                    ports[resource] = True
+        
+        return ports
+    
     def get_board_data(self) -> dict:
         """
         Serialize board data for sending to client.
@@ -610,10 +696,13 @@ class Game:
         
         vertices = {}
         for key, vertex_obj in self.vertices.items():
-            vertices[key] = {
+            vertex_data = {
                 'building': vertex_obj.building,
                 'neighbors': vertex_obj.neighbors
             }
+            if vertex_obj.port:
+                vertex_data['port'] = vertex_obj.port
+            vertices[key] = vertex_data
         
         edges = {}
         for key, edge_obj in self.edges.items():
@@ -634,7 +723,7 @@ class Game:
             'hexes': hexes,
             'vertices': vertices,
             'edges': edges,
-            'players': [p.to_dict() for p in self.players],
+            'players': [p.to_dict(self.longest_road_holder, self.largest_army_holder) for p in self.players],
             'bank': self.bank.get_all(),
             'dev_card_deck': self.bank.get_dev_card_counts(),
             'trades': {
@@ -653,7 +742,11 @@ class Game:
             'round_time': self.get_round_time_remaining(),
             'has_rolled_dice': self.has_rolled_dice,
             'turn_count': self.turn_count,
-            'free_roads_remaining': self.free_roads_remaining
+            'free_roads_remaining': self.free_roads_remaining,
+            'longest_road_holder': self.longest_road_holder,
+            'largest_army_holder': self.largest_army_holder,
+            'longest_road_length': self.longest_road_length,
+            'knights_played': {p.name: p.knights_played for p in self.players}
         }
     
     def distribute_resources(self, dice_total: int):
@@ -1016,4 +1109,143 @@ class Game:
         import time
         self.has_rolled_dice = True
         self.dice_rolled_time = time.time()
+    
+    def calculate_longest_road(self, player_name: str) -> int:
+        """Calculate longest road for a player, respecting road blocks."""
+        player = self.get_player(player_name)
+        if not player:
+            return 0
+        
+        player_roads = [edge_key for edge_key, edge in self.edges.items() 
+                       if edge.road and edge.road.get('player') == player_name]
+        
+        if not player_roads:
+            return 0
+        
+        def has_other_player_building(vertex_key):
+            """Check if vertex has another player's building."""
+            vertex = self.vertices.get(vertex_key)
+            if vertex and vertex.building:
+                building_player = vertex.building.get('player')
+                if building_player and building_player != player_name:
+                    return True
+            return False
+        
+        def find_road_endpoints():
+            """Find vertices that are endpoints of player's roads (have exactly 1 road connected).
+            Also filter out vertices blocked by other player's buildings."""
+            vertex_road_count = {}
+            for edge_key in player_roads:
+                edge = self.edges[edge_key]
+                for vertex_key in edge.neighbors.get('vertices', []):
+                    vertex_road_count[vertex_key] = vertex_road_count.get(vertex_key, 0) + 1
+            
+            # Endpoints have exactly 1 road AND no other player's building at the start
+            return [v for v, count in vertex_road_count.items() 
+                    if count == 1 and not has_other_player_building(v)]
+        
+        def dfs(vertex_key, visited_edges):
+            """DFS to find longest path from current vertex."""
+            max_length = len(visited_edges)
+            
+            # Get all connected edges
+            vertex = self.vertices.get(vertex_key)
+            if not vertex:
+                return max_length
+            
+            for edge_key in vertex.neighbors.get('edges', []):
+                if edge_key in visited_edges:
+                    continue
+                
+                # Check if this is player's road
+                edge = self.edges.get(edge_key)
+                if not edge or not edge.road or edge.road.get('player') != player_name:
+                    continue
+                
+                # Find the next vertex
+                edge_vertices = edge.neighbors.get('vertices', [])
+                next_vertex = None
+                for v in edge_vertices:
+                    if v != vertex_key:
+                        next_vertex = v
+                        break
+                
+                if not next_vertex:
+                    continue
+                
+                # Check if blocked by other player's building at the next vertex
+                if has_other_player_building(next_vertex):
+                    # Blocked - can't pass through another player's building
+                    # But can count the road leading TO it
+                    max_length = max(max_length, len(visited_edges) + 1)
+                    continue
+                
+                # Continue through empty vertices or player's own buildings
+                result = dfs(next_vertex, visited_edges + [edge_key])
+                max_length = max(max_length, result)
+            
+            return max_length
+        
+        # Find longest path from each valid endpoint
+        endpoints = find_road_endpoints()
+        
+        # If no valid endpoints (all blocked), try finding any starting point
+        if not endpoints:
+            for edge_key in player_roads:
+                edge = self.edges[edge_key]
+                for v in edge.neighbors.get('vertices', []):
+                    if not has_other_player_building(v):
+                        endpoints.append(v)
+                        break
+                if endpoints:
+                    break
+        
+        max_length = 0
+        for endpoint in endpoints:
+            length = dfs(endpoint, [])
+            max_length = max(max_length, length)
+        
+        return max_length
+    
+    def update_longest_road(self):
+        """Update longest road holder after road placement."""
+        max_length = 0
+        longest_holder = None
+        
+        for player in self.players:
+            length = self.calculate_longest_road(player.name)
+            self.longest_road_length[player.name] = length
+            
+            if length > max_length:
+                max_length = length
+                longest_holder = player.name
+        
+        # Only update if someone has 5+ roads
+        if max_length >= 5:
+            if self.longest_road_holder != longest_holder:
+                old_holder = self.longest_road_holder
+                self.longest_road_holder = longest_holder
+                if longest_holder:
+                    print(f"Longest Road! {longest_holder} now has {max_length} roads (took from {old_holder})")
+    
+    def update_largest_army(self):
+        """Update largest army holder after playing knight."""
+        max_knights = 0
+        army_holder = None
+        
+        for player in self.players:
+            knights = player.knights_played
+            self.knights_played[player.name] = knights
+            
+            if knights > max_knights:
+                max_knights = knights
+                army_holder = player.name
+        
+        # Only update if someone has 3+ knights
+        if max_knights >= 3:
+            if self.largest_army_holder != army_holder:
+                old_holder = self.largest_army_holder
+                self.largest_army_holder = army_holder
+                if army_holder:
+                    print(f"Largest Army! {army_holder} now has {max_knights} knights (took from {old_holder})")
 

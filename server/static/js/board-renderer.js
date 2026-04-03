@@ -180,8 +180,52 @@ function drawEdge(ctx, x1, y1, x2, y2) {
 }
 
 /**
+ * Draw a port at a vertex position.
+ * Port appears as a small harbor icon (anchor shape).
+ * 
+ * @param {CanvasRenderingContext2D} ctx - Canvas context
+ * @param {number} x - X position
+ * @param {number} y - Y position
+ * @param {object} port - Port info {type: "generic"/"resource", resource: string}
+ */
+function drawPort(ctx, x, y, port) {
+    const size = 10;
+    
+    // Set color based on port type
+    if (port.type === 'generic') {
+        ctx.fillStyle = '#3498db'; // Blue for generic 3:1
+    } else {
+        ctx.fillStyle = '#e67e22'; // Orange for resource-specific 2:1
+    }
+    
+    // Draw anchor shape (circle with cross)
+    ctx.beginPath();
+    ctx.arc(x, y, size/2, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Draw inner dot
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Draw resource icon if specific port
+    if (port.type === 'resource' && port.resource) {
+        const resourceIcons = {
+            wood: '🌲',
+            brick: '🧱',
+            sheep: '🐑',
+            wheat: '🌾',
+            ore: '🪨'
+        };
+        ctx.font = '8px Arial';
+        ctx.fillText(resourceIcons[port.resource] || '', x - 5, y + 12);
+    }
+}
+
+/**
  * Draw a settlement at a vertex position.
- * Settlement appears as a colored square with player color.
+ * Settlement appears as a square.
  * 
  * @param {CanvasRenderingContext2D} ctx - Canvas context
  * @param {number} x - X position
@@ -361,6 +405,16 @@ function renderBoard(boardData, canvasId, highlightNumber = null) {
                 }
                 // Note: Empty edges are not drawn (only clickable)
             }
+        }
+    }
+    
+    // Draw ports on vertices
+    for (const key in vertices) {
+        const vertex = vertices[key];
+        const pos = vertexPositions[key];
+        
+        if (vertex.port) {
+            drawPort(ctx, pos.x, pos.y, vertex.port);
         }
     }
     
