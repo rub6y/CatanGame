@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  catanpro:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./server/data:/app/data
+    environment:
+      - FLASK_ENV=production
+      - FLASK_DEBUG=0
